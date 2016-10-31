@@ -48,6 +48,7 @@ import org.apache.atlas.services.IBootstrapTypesRegistrar;
 import org.apache.atlas.services.MetadataService;
 import org.apache.atlas.services.ReservedTypesRegistrar;
 import org.apache.atlas.store.AtlasTypeDefStore;
+import org.apache.atlas.type.AtlasTypeRegistry;
 import org.apache.atlas.typesystem.types.TypeSystem;
 import org.apache.atlas.typesystem.types.TypeSystemProvider;
 import org.apache.atlas.typesystem.types.cache.TypeCache;
@@ -67,6 +68,8 @@ public class RepositoryMetadataModule extends com.google.inject.AbstractModule {
         bind(MetadataRepository.class).to(GraphBackedMetadataRepository.class).asEagerSingleton();
 
         bind(TypeSystem.class).toProvider(TypeSystemProvider.class).in(Singleton.class);
+
+        bind(AtlasTypeRegistry.class).asEagerSingleton();
 
         // bind the ITypeStore interface to an implementation
         bind(ITypeStore.class).to(GraphBackedTypeStore.class).asEagerSingleton();
