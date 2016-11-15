@@ -18,9 +18,9 @@
 package org.apache.atlas.services;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.inject.Singleton;
 import org.apache.atlas.ApplicationProperties;
 import org.apache.atlas.AtlasException;
+import org.apache.atlas.annotation.AtlasService;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.metrics.AtlasMetrics;
 import org.apache.atlas.repository.graph.AtlasGraphProvider;
@@ -35,7 +35,7 @@ import javax.inject.Inject;
 import java.util.List;
 import java.util.Map;
 
-@Singleton
+@AtlasService
 public class MetricsService {
     private static final Logger LOG = LoggerFactory.getLogger(MetricsService.class);
 

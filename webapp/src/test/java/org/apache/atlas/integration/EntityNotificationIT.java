@@ -16,11 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.atlas.notification;
+package org.apache.atlas.integration;
 
 import com.google.common.collect.ImmutableSet;
-import com.google.inject.Inject;
 import org.apache.atlas.AtlasClient;
+import org.apache.atlas.notification.NotificationConsumer;
+import org.apache.atlas.notification.NotificationInterface;
 import org.apache.atlas.notification.entity.EntityNotification;
 import org.apache.atlas.typesystem.IReferenceableInstance;
 import org.apache.atlas.typesystem.IStruct;
@@ -32,11 +33,10 @@ import org.apache.atlas.typesystem.persistence.Id;
 import org.apache.atlas.typesystem.types.HierarchicalTypeDefinition;
 import org.apache.atlas.typesystem.types.TraitType;
 import org.apache.atlas.typesystem.types.utils.TypesUtil;
-import org.apache.atlas.web.resources.BaseResourceIT;
 import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
+import javax.inject.Inject;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -48,7 +48,6 @@ import static org.testng.Assert.assertTrue;
 /**
  * Entity Notification Integration Tests.
  */
-@Guice(modules = NotificationModule.class)
 public class EntityNotificationIT extends BaseResourceIT {
 
     private final String DATABASE_NAME = "db" + randomString();

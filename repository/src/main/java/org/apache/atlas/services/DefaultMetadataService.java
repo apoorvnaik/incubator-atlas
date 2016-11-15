@@ -20,9 +20,6 @@ package org.apache.atlas.services;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Provider;
-
-import org.apache.atlas.ApplicationProperties;
 import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.AtlasException;
@@ -55,16 +52,7 @@ import org.apache.atlas.typesystem.json.InstanceSerialization;
 import org.apache.atlas.typesystem.json.TypesSerialization;
 import org.apache.atlas.typesystem.persistence.Id;
 import org.apache.atlas.typesystem.persistence.ReferenceableInstance;
-import org.apache.atlas.typesystem.types.AttributeInfo;
-import org.apache.atlas.typesystem.types.ClassType;
-import org.apache.atlas.typesystem.types.DataTypes;
-import org.apache.atlas.typesystem.types.EnumTypeDefinition;
-import org.apache.atlas.typesystem.types.HierarchicalTypeDefinition;
-import org.apache.atlas.typesystem.types.IDataType;
-import org.apache.atlas.typesystem.types.Multiplicity;
-import org.apache.atlas.typesystem.types.StructTypeDefinition;
-import org.apache.atlas.typesystem.types.TraitType;
-import org.apache.atlas.typesystem.types.TypeSystem;
+import org.apache.atlas.typesystem.types.*;
 import org.apache.atlas.typesystem.types.cache.TypeCache;
 import org.apache.atlas.utils.ParamChecker;
 import org.apache.commons.configuration.Configuration;
@@ -72,11 +60,17 @@ import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.*;
+import org.springframework.stereotype.Component;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 
 
@@ -85,6 +79,7 @@ import javax.inject.Singleton;
  * for listening to changes to the repository.
  */
 @Singleton
+@Component
 @Deprecated
 public class DefaultMetadataService implements MetadataService, ActiveStateChangeHandler, TypeDefChangeListener {
     private enum OperationType {
@@ -103,24 +98,16 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
     private final Collection<TypesChangeListener> typeChangeListeners = new LinkedHashSet<>();
     private final Collection<EntityChangeListener> entityChangeListeners = new LinkedHashSet<>();
 
-    @Inject
     private EntityAuditRepository auditRepository;
 
     @Inject
-    DefaultMetadataService(final MetadataRepository repository, final ITypeStore typeStore,
-                           final Collection<Provider<TypesChangeListener>> typeListenerProviders,
-                           final Collection<Provider<EntityChangeListener>> entityListenerProviders, TypeCache typeCache)
-            throws AtlasException {
-        this(repository, typeStore, typeListenerProviders, entityListenerProviders,
-                TypeSystem.getInstance(), ApplicationProperties.get(), typeCache);
-    }
-    
-    //for testing only
     public DefaultMetadataService(final MetadataRepository repository, final ITypeStore typeStore,
-                           final Collection<Provider<TypesChangeListener>> typeListenerProviders,
-                           final Collection<Provider<EntityChangeListener>> entityListenerProviders,
-                           final TypeSystem typeSystem,
-                           final Configuration configuration, TypeCache typeCache) throws AtlasException {
+                                  final Set<TypesChangeListener> typesChangeListeners,
+                                  final Set<EntityChangeListener> entityChangeListeners,
+                                  final TypeSystem typeSystem,
+                                  final Configuration configuration,
+                                  TypeCache typeCache,
+                                  EntityAuditRepository auditRepository) throws AtlasException {
         this.typeStore = typeStore;
         this.typeSystem = typeSystem;
         /**
@@ -136,19 +123,17 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
 
         this.repository = repository;
 
-        for (Provider<TypesChangeListener> provider : typeListenerProviders) {
-            typeChangeListeners.add(provider.get());
-        }
+        this.typeChangeListeners.addAll(typesChangeListeners);
 
-        for (Provider<EntityChangeListener> provider : entityListenerProviders) {
-            entityChangeListeners.add(provider.get());
-        }
+        this.entityChangeListeners.addAll(entityChangeListeners);
 
         if (!HAConfiguration.isHAEnabled(configuration)) {
             restoreTypeSystem();
         }
 
         maxAuditResults = configuration.getShort(CONFIG_MAX_AUDIT_RESULTS, DEFAULT_MAX_AUDIT_RESULTS);
+
+        this.auditRepository = auditRepository;
     }
 
     private void restoreTypeSystem() throws AtlasException {
@@ -310,7 +295,7 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
     public ITypedReferenceableInstance[] deserializeClassInstances(String entityInstanceDefinition) throws AtlasException {
         return GraphHelper.deserializeClassInstances(typeSystem, entityInstanceDefinition);
     }
-    
+
     @Override
     public ITypedReferenceableInstance getTypedReferenceableInstance(Referenceable entityInstance) throws AtlasException {
         return GraphHelper.getTypedReferenceableInstance(typeSystem, entityInstance);
@@ -353,7 +338,7 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
         return repository.getEntityDefinition(entityType, attribute, value);
     }
 
-        @Override
+    @Override
     public String getEntityDefinition(String entityType, String attribute, String value) throws AtlasException {
         final ITypedReferenceableInstance instance = getEntityDefinitionReference(entityType, attribute, value);
         return InstanceSerialization.toJson(instance, true);
@@ -632,8 +617,8 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
 
         // ensure trait is not already defined
         Preconditions
-            .checkArgument(!getTraitNames(guid).contains(traitName), "trait=%s is already defined for entity=%s",
-                    traitName, guid);
+                .checkArgument(!getTraitNames(guid).contains(traitName), "trait=%s is already defined for entity=%s",
+                        traitName, guid);
 
         repository.addTrait(guid, traitInstance);
 
@@ -641,7 +626,7 @@ public class DefaultMetadataService implements MetadataService, ActiveStateChang
     }
 
     private ITypedStruct deserializeTraitInstance(String traitInstanceDefinition)
-    throws AtlasException {
+            throws AtlasException {
         return createTraitInstance(InstanceSerialization.fromJsonStruct(traitInstanceDefinition, true));
     }
 

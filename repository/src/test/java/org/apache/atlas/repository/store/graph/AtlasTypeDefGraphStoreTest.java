@@ -17,9 +17,6 @@
  */
 package org.apache.atlas.repository.store.graph;
 
-import com.google.inject.Inject;
-
-import org.apache.atlas.RepositoryMetadataModule;
 import org.apache.atlas.TestUtilsV2;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.SearchFilter;
@@ -32,30 +29,26 @@ import org.apache.atlas.repository.graph.AtlasGraphProvider;
 import org.apache.atlas.store.AtlasTypeDefStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.testng.Assert;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.DataProvider;
-import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
-import java.util.Arrays;
+import javax.inject.Inject;
 import java.util.Collections;
 import java.util.List;
 
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertNotEquals;
-import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertNull;
-import static org.testng.Assert.assertTrue;
-import static org.testng.Assert.fail;
+import static org.testng.Assert.*;
 
-@Guice(modules = RepositoryMetadataModule.class)
-public class AtlasTypeDefGraphStoreTest {
+@ContextConfiguration(locations = { "classpath:test-context.xml" })
+@ActiveProfiles("test")
+public class AtlasTypeDefGraphStoreTest extends AbstractTestNGSpringContextTests {
     private static final Logger LOG = LoggerFactory.getLogger(AtlasTypeDefGraphStoreTest.class);
 
     @Inject
-    private
-    AtlasTypeDefStore typeDefStore;
+    private AtlasTypeDefStore typeDefStore;
 
     @AfterClass
     public void clear(){
@@ -197,7 +190,7 @@ public class AtlasTypeDefGraphStoreTest {
             assertTrue(createdTypesDef.getEnumDefs().containsAll(atlasTypesDef.getEnumDefs()), "EnumDefs create failed");
             assertTrue(createdTypesDef.getClassificationDefs().containsAll(atlasTypesDef.getClassificationDefs()), "ClassificationDef create failed");
             assertTrue(createdTypesDef.getStructDefs().containsAll(atlasTypesDef.getStructDefs()), "StructDef creation failed");
-            Assert.assertEquals(createdTypesDef.getEntityDefs(), atlasTypesDef.getEntityDefs());
+            assertEquals(createdTypesDef.getEntityDefs(), atlasTypesDef.getEntityDefs());
 
         } catch (AtlasBaseException e) {
             fail("Creation of Types should've been a success", e);

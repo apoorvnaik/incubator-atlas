@@ -59,8 +59,10 @@ public abstract class AbstractGremlinQueryOptimizerTest implements IAtlasGraphPr
 
     protected abstract GremlinExpressionFactory getFactory();
 
-    private MetadataRepository repo = new GraphBackedMetadataRepository(this, new HardDeleteHandler(TypeSystem.getInstance()));
+    // FIXME: If needed
+//    private MetadataRepository repo = new GraphBackedMetadataRepository(new HardDeleteHandler(TypeSystem.getInstance()), this.get());
     private final GraphPersistenceStrategies STRATEGY = mock(GraphPersistenceStrategies.class);
+
     @BeforeClass
     public void setUp() {
         GremlinQueryOptimizer.reset();

@@ -18,25 +18,7 @@
 
 package org.apache.atlas.repository.graph;
 
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertNull;
-import static org.testng.Assert.assertTrue;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import javax.inject.Inject;
-
 import org.apache.atlas.AtlasException;
-import org.apache.atlas.RepositoryMetadataModule;
 import org.apache.atlas.TestUtils;
 import org.apache.atlas.repository.graph.GraphHelper.VertexInfo;
 import org.apache.atlas.repository.graphdb.AtlasEdge;
@@ -54,15 +36,30 @@ import org.apache.atlas.typesystem.types.ClassType;
 import org.apache.atlas.typesystem.types.Multiplicity;
 import org.apache.atlas.typesystem.types.TypeSystem;
 import org.codehaus.jettison.json.JSONArray;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
-import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
-@Guice(modules = RepositoryMetadataModule.class)
-public class GraphHelperTest {
+import javax.inject.Inject;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import static org.testng.Assert.*;
+
+@ContextConfiguration(locations = { "classpath:test-context.xml" })
+@ActiveProfiles("test")
+public class GraphHelperTest extends AbstractTestNGSpringContextTests {
 
 
     @DataProvider(name = "encodeDecodeTestData")
@@ -87,6 +84,7 @@ public class GraphHelperTest {
     @Inject
     private GraphBackedMetadataRepository repositoryService;
 
+    @Inject
     private TypeSystem typeSystem;
 
     @Inject
@@ -94,10 +92,9 @@ public class GraphHelperTest {
 
     @BeforeClass
     public void setUp() throws Exception {
-        typeSystem = TypeSystem.getInstance();
         typeSystem.reset();
 
-        new GraphBackedSearchIndexer(typeRegistry);
+//        new GraphBackedSearchIndexer(typeRegistry);
         TypesDef typesDef = TestUtils.defineHiveTypes();
         try {
             metadataService.getTypeDefinition(TestUtils.TABLE_TYPE);

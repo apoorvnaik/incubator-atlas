@@ -38,14 +38,20 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+@Singleton
+@Service
 public class AtlasEntityFormatConverter extends AtlasStructFormatConverter {
     private static final Logger LOG = LoggerFactory.getLogger(AtlasEntityFormatConverter.class);
 
+    @Inject
     public AtlasEntityFormatConverter(AtlasFormatConverters registry, AtlasTypeRegistry typeRegistry) {
         super(registry, typeRegistry, TypeCategory.ENTITY);
     }

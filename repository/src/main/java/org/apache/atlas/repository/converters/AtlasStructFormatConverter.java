@@ -32,6 +32,9 @@ import org.apache.commons.collections.MapUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.inject.Inject;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -40,6 +43,7 @@ public class AtlasStructFormatConverter extends AtlasAbstractFormatConverter {
 
     public static final String ATTRIBUTES_PROPERTY_KEY = "attributes";
 
+    @Inject
     public AtlasStructFormatConverter(AtlasFormatConverters registry, AtlasTypeRegistry typeRegistry) {
         this(registry, typeRegistry, TypeCategory.STRUCT);
     }

@@ -471,7 +471,7 @@ public class AtlasClient extends AtlasBaseClient {
             String typeJson = response.getString(DEFINITION);
             return TypesSerialization.fromJson(typeJson);
         } catch (AtlasServiceException e) {
-            if (Response.Status.NOT_FOUND.equals(e.getStatus())) {
+            if (Response.Status.NOT_FOUND.getStatusCode() == e.getStatus().getStatusCode()) {
                 return null;
             }
             throw e;

@@ -19,8 +19,10 @@
 package org.apache.atlas;
 
 import org.apache.atlas.repository.graph.AtlasGraphProvider;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.Assert;
-import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
 /**
@@ -29,8 +31,9 @@ import org.testng.annotations.Test;
  * Uses TestNG's Guice annotation to load the necessary modules and inject the
  * objects from Guice
  */
-@Guice(modules = RepositoryMetadataModule.class)
-public class RepositoryServiceLoadingTest {
+@ContextConfiguration(locations = { "classpath:test-context.xml" })
+@ActiveProfiles("test")
+public class RepositoryServiceLoadingTest extends AbstractTestNGSpringContextTests {
 
     @Test
     public void testGetGraphService() throws Exception {

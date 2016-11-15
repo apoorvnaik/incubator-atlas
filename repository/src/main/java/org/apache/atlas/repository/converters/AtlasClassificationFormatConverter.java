@@ -29,12 +29,18 @@ import org.apache.atlas.typesystem.IStruct;
 import org.apache.commons.collections.MapUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import java.util.Map;
 
+@Service
+@Singleton
 public class AtlasClassificationFormatConverter extends AtlasStructFormatConverter {
     private static final Logger LOG = LoggerFactory.getLogger(AtlasClassificationFormatConverter.class);
 
+    @Inject
     public AtlasClassificationFormatConverter(AtlasFormatConverters registry, AtlasTypeRegistry typeRegistry) {
         super(registry, typeRegistry, TypeCategory.CLASSIFICATION);
     }

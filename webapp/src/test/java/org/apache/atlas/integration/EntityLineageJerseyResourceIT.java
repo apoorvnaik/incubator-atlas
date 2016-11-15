@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.atlas.web.resources;
+package org.apache.atlas.integration;
 
 import com.google.common.collect.ImmutableList;
 import com.google.gson.Gson;

@@ -18,10 +18,8 @@
 
 package org.apache.atlas.repository.graph;
 
-import org.apache.atlas.ApplicationProperties;
 import org.apache.atlas.CreateUpdateEntitiesResult;
 import org.apache.atlas.GraphTransaction;
-import org.apache.atlas.RepositoryMetadataModule;
 import org.apache.atlas.TestUtils;
 import org.apache.atlas.repository.Constants;
 import org.apache.atlas.repository.RepositoryException;
@@ -30,7 +28,6 @@ import org.apache.atlas.repository.graphdb.AtlasGraphQuery;
 import org.apache.atlas.repository.graphdb.AtlasGraphQuery.ComparisionOperator;
 import org.apache.atlas.repository.graphdb.AtlasIndexQuery;
 import org.apache.atlas.repository.graphdb.AtlasVertex;
-import org.apache.atlas.type.AtlasTypeRegistry;
 import org.apache.atlas.typesystem.ITypedReferenceableInstance;
 import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.Struct;
@@ -40,23 +37,24 @@ import org.apache.atlas.typesystem.types.ClassType;
 import org.apache.atlas.typesystem.types.IDataType;
 import org.apache.atlas.typesystem.types.Multiplicity;
 import org.apache.atlas.typesystem.types.TypeSystem;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
+import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
 
-import javax.inject.Inject;
-
-@Test
-@Guice(modules = RepositoryMetadataModule.class)
-public class GraphRepoMapperScaleTest {
+@ContextConfiguration(locations = { "classpath:test-context.xml" })
+@ActiveProfiles("test")
+public class GraphRepoMapperScaleTest extends AbstractTestNGSpringContextTests {
 
     private static final String DATABASE_NAME = "foo";
     private static final String TABLE_NAME = "bar";
@@ -67,7 +65,8 @@ public class GraphRepoMapperScaleTest {
     @Inject
     private GraphBackedSearchIndexer searchIndexer;
 
-    private TypeSystem typeSystem = TypeSystem.getInstance();
+    @Inject
+    private TypeSystem typeSystem;
 
     private String dbGUID;
 
@@ -76,7 +75,7 @@ public class GraphRepoMapperScaleTest {
     public void setUp() throws Exception {
         //force up front graph initialization
         TestUtils.getGraph();
-        searchIndexer = new GraphBackedSearchIndexer(new AtlasGraphProvider(), ApplicationProperties.get(), new AtlasTypeRegistry());
+//        searchIndexer = new GraphBackedSearchIndexer(new AtlasGraphProvider(), ApplicationProperties.get(), new AtlasTypeRegistry());
         //Make sure we can cleanup the index directory
         Collection<IDataType> typesAdded = TestUtils.createHiveTypes(typeSystem);
         searchIndexer.onAdd(typesAdded);
@@ -89,7 +88,7 @@ public class GraphRepoMapperScaleTest {
 
     @AfterClass
     public void tearDown() throws Exception {
-        TypeSystem.getInstance().reset();
+        typeSystem.reset();
         AtlasGraphProvider.cleanup();
     }
 

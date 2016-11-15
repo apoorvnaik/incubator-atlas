@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.atlas.web.resources;
+package org.apache.atlas.integration;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -56,9 +56,12 @@ import org.apache.atlas.utils.AuthenticationUtil;
 import org.apache.atlas.utils.ParamChecker;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.codehaus.jettison.json.JSONArray;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 
@@ -78,7 +81,8 @@ import static org.testng.Assert.assertTrue;
  * Base class for integration tests.
  * Sets up the web resource and has helper methods to create type and entity.
  */
-public abstract class BaseResourceIT {
+@ContextConfiguration(locations = { "classpath:test-context.xml" })
+public abstract class BaseResourceIT extends AbstractTestNGSpringContextTests {
 
     public static final String ATLAS_REST_ADDRESS = "atlas.rest.address";
     public static final String NAME = "name";
@@ -119,104 +123,97 @@ public abstract class BaseResourceIT {
         }
     }
 
-    protected void batchCreateTypes(AtlasTypesDef typesDef) throws AtlasServiceException { 
+    protected Pair<AtlasTypesDef, AtlasTypesDef> createType(AtlasTypesDef typesDef) {
+        AtlasTypesDef nonExistentTypesDef = new AtlasTypesDef();
+        AtlasTypesDef existingTypesDef = new AtlasTypesDef();
+
         for (AtlasEnumDef enumDef : typesDef.getEnumDefs()) {
             try {
-                atlasClientV2.createEnumDef(enumDef);
-            } catch (AtlasServiceException ex) {
-                LOG.warn("EnumDef creation failed for {}", enumDef.getName());
+                atlasClientV2.getEnumDefByName(enumDef.getName());
+                existingTypesDef.getEnumDefs().add(enumDef);
+            } catch (AtlasServiceException e) {
+                nonExistentTypesDef.getEnumDefs().add(enumDef);
             }
+
         }
+
         for (AtlasStructDef structDef : typesDef.getStructDefs()) {
             try {
-                atlasClientV2.createStructDef(structDef);
+                atlasClientV2.getStructDefByName(structDef.getName());
+                existingTypesDef.getStructDefs().add(structDef);
             } catch (AtlasServiceException ex) {
-                LOG.warn("StructDef creation failed for {}", structDef.getName());
-            }
-        }
-        
-            AtlasTypesDef entityDefs = new AtlasTypesDef(
-            Collections.<AtlasEnumDef>emptyList(),
-            Collections.<AtlasStructDef>emptyList(),
-            Collections.<AtlasClassificationDef>emptyList(),
-            typesDef.getEntityDefs());
-        try {
-            atlasClientV2.createAtlasTypeDefs(entityDefs);
-        }
-        catch(AtlasServiceException e) {
-            LOG.warn("Type creation failed for {}", typesDef.toString());
-            LOG.warn(e.toString());
-        }
-        
-        for (AtlasClassificationDef classificationDef : typesDef.getClassificationDefs()) {
-            try {
-                atlasClientV2.createClassificationDef(classificationDef);
-            } catch (AtlasServiceException ex) {
-                LOG.warn("ClassificationDef creation failed for {}", classificationDef.getName());
+                nonExistentTypesDef.getStructDefs().add(structDef);
             }
         }
 
-    }
-    
-    protected void createType(AtlasTypesDef typesDef) {
-        // Since the bulk create bails out on a single failure, this has to be done as a workaround
-        for (AtlasEnumDef enumDef : typesDef.getEnumDefs()) {
+        for (AtlasClassificationDef classificationDef : typesDef.getClassificationDefs()) {
             try {
-                atlasClientV2.createEnumDef(enumDef);
+                atlasClientV2.getClassificationDefByName(classificationDef.getName());
+                existingTypesDef.getClassificationDefs().add(classificationDef);
             } catch (AtlasServiceException ex) {
-                LOG.warn("EnumDef creation failed for {}", enumDef.getName());
+                nonExistentTypesDef.getClassificationDefs().add(classificationDef);
             }
         }
-        for (AtlasStructDef structDef : typesDef.getStructDefs()) {
-            try {
-                atlasClientV2.createStructDef(structDef);
-            } catch (AtlasServiceException ex) {
-                LOG.warn("StructDef creation failed for {}", structDef.getName());
-            }
-        }
+
         for (AtlasEntityDef entityDef : typesDef.getEntityDefs()) {
             try {
-                atlasClientV2.createEntityDef(entityDef);
+                atlasClientV2.getEntityDefByName(entityDef.getName());
+                existingTypesDef.getEntityDefs().add(entityDef);
             } catch (AtlasServiceException ex) {
-                LOG.warn("EntityDef creation failed for {}", entityDef.getName());
-            }
-        }
-        for (AtlasClassificationDef classificationDef : typesDef.getClassificationDefs()) {
-            try {
-                atlasClientV2.createClassificationDef(classificationDef);
-            } catch (AtlasServiceException ex) {
-                LOG.warn("ClassificationDef creation failed for {}", classificationDef.getName());
+                nonExistentTypesDef.getEntityDefs().add(entityDef);
             }
         }
 
+        try {
+            atlasClientV2.createAtlasTypeDefs(nonExistentTypesDef);
+        } catch(AtlasServiceException e) {
+            LOG.warn("Type creation failed for {}", typesDef.toString(), e);
+        }
+
+        return Pair.of(existingTypesDef, nonExistentTypesDef);
     }
 
     protected void createType(TypesDef typesDef) throws Exception {
+        TypesDef nonExistingTypesDef = new TypesDef();
         try{
             if ( !typesDef.enumTypes().isEmpty() ){
-                String sampleType = typesDef.enumTypesAsJavaList().get(0).name;
-                atlasClientV1.getType(sampleType);
-                LOG.info("Checking enum type existence");
+                for (EnumTypeDefinition enumTypeDefinition : typesDef.enumTypesAsJavaList()) {
+                    LOG.info("Checking enum type existence for {}", enumTypeDefinition.name);
+                    TypesDef type = atlasClientV1.getType(enumTypeDefinition.name);
+                    if (type == null) {
+                        nonExistingTypesDef.enumTypesAsJavaList().add(enumTypeDefinition);
+                    }
+                }
             }
             else if( !typesDef.structTypes().isEmpty()){
-                StructTypeDefinition sampleType = typesDef.structTypesAsJavaList().get(0);
-                atlasClientV1.getType(sampleType.typeName);
-                LOG.info("Checking struct type existence");
+                for (StructTypeDefinition structTypeDefinition : typesDef.structTypesAsJavaList()) {
+                    LOG.info("Checking struct type existence for {}", structTypeDefinition.typeName);
+                    TypesDef type = atlasClientV1.getType(structTypeDefinition.typeName);
+                    if (type == null) {
+                        nonExistingTypesDef.structTypesAsJavaList().add(structTypeDefinition);
+                    }
+                }
             }
             else if( !typesDef.traitTypes().isEmpty()){
-                HierarchicalTypeDefinition<TraitType> sampleType = typesDef.traitTypesAsJavaList().get(0);
-                atlasClientV1.getType(sampleType.typeName);
-                LOG.info("Checking trait type existence");
+                for (HierarchicalTypeDefinition<TraitType> traitDefinition : typesDef.traitTypesAsJavaList()) {
+                    LOG.info("Checking trait type existence for {}", traitDefinition.typeName);
+                    TypesDef type = atlasClientV1.getType(traitDefinition.typeName);
+                    if (type == null) {
+                        nonExistingTypesDef.traitTypesAsJavaList().add(traitDefinition);
+                    }
+                }
+            } else {
+                for (HierarchicalTypeDefinition<ClassType> classTypeHierarchicalTypeDefinition : typesDef.classTypesAsJavaList()) {
+                    LOG.info("Checking class type existence for {}", classTypeHierarchicalTypeDefinition.typeName);
+                    TypesDef type = atlasClientV1.getType(classTypeHierarchicalTypeDefinition.typeName);
+                    if (type == null) {
+                        nonExistingTypesDef.classTypesAsJavaList().add(classTypeHierarchicalTypeDefinition);
+                    }
+                }
             }
-            else{
-                HierarchicalTypeDefinition<ClassType> sampleType = typesDef.classTypesAsJavaList().get(0);
-                atlasClientV1.getType(sampleType.typeName);
-                LOG.info("Checking class type existence");
-            }
-            LOG.info("Types already exist. Skipping type creation");
         } catch(AtlasServiceException ase) {
             //Expected if type doesn't exist
-            String typesAsJSON = TypesSerialization.toJson(typesDef);
+            String typesAsJSON = TypesSerialization.toJson(nonExistingTypesDef);
             createType(typesAsJSON);
         }
     }
@@ -230,13 +227,18 @@ public abstract class BaseResourceIT {
         System.out.println("creating instance of type " + typeName);
 
         String entityJSON = InstanceSerialization.toJson(referenceable, true);
-        System.out.println("Submitting new entity= " + entityJSON);
-        List<String> guids = atlasClientV1.createEntity(entityJSON);
-        System.out.println("created instance for type " + typeName + ", guid: " + guids);
+        try {
+            Referenceable entity = atlasClientV1.getEntity(referenceable.getId()._getId());
+            return entity.getId();
+        } catch (AtlasServiceException e) {
+            System.out.println("Submitting new entity= " + entityJSON);
+            List<String> guids = atlasClientV1.createEntity(entityJSON);
+            System.out.println("created instance for type " + typeName + ", guid: " + guids);
 
-        // return the reference to created instance with guid
-        if (guids.size() > 0) {
-            return new Id(guids.get(guids.size() - 1), 0, referenceable.getTypeName());
+            // return the reference to created instance with guid
+            if (guids.size() > 0) {
+                return new Id(guids.get(guids.size() - 1), 0, referenceable.getTypeName());
+            }
         }
         return null;
     }
@@ -473,7 +475,7 @@ public abstract class BaseResourceIT {
                 ImmutableList.of(classificationTrait, piiTrait, phiTrait, pciTrait, soxTrait, secTrait, financeTrait),
                 ImmutableList.of(dbClsTypeDef, columnClsDef, tblClsDef, loadProcessClsDef));
 
-        batchCreateTypes(typesDef);
+        createType(typesDef);
     }
 
     AttributeDefinition attrDef(String name, IDataType dT) {

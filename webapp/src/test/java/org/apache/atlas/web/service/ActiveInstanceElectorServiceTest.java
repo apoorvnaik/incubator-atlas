@@ -18,7 +18,6 @@
 
 package org.apache.atlas.web.service;
 
-import com.google.inject.Provider;
 import org.apache.atlas.AtlasConstants;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.ha.HAConfiguration;
@@ -32,15 +31,10 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 import org.apache.atlas.exception.AtlasBaseException;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.inOrder;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyZeroInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 public class ActiveInstanceElectorServiceTest {
 
@@ -75,7 +69,7 @@ public class ActiveInstanceElectorServiceTest {
         when(curatorFactory.leaderLatchInstance("id1", HAConfiguration.ATLAS_SERVER_ZK_ROOT_DEFAULT)).thenReturn(leaderLatch);
 
         ActiveInstanceElectorService activeInstanceElectorService =
-                new ActiveInstanceElectorService(configuration, new ArrayList(), curatorFactory,
+                new ActiveInstanceElectorService(configuration, new HashSet<ActiveStateChangeHandler>(), curatorFactory,
                         activeInstanceState, serviceState);
         activeInstanceElectorService.start();
 
@@ -96,7 +90,7 @@ public class ActiveInstanceElectorServiceTest {
         when(curatorFactory.leaderLatchInstance("id1", HAConfiguration.ATLAS_SERVER_ZK_ROOT_DEFAULT)).thenReturn(leaderLatch);
 
         ActiveInstanceElectorService activeInstanceElectorService =
-                new ActiveInstanceElectorService(configuration, new ArrayList(), curatorFactory,
+                new ActiveInstanceElectorService(configuration, new HashSet<ActiveStateChangeHandler>(), curatorFactory,
                         activeInstanceState, serviceState);
         activeInstanceElectorService.start();
 
@@ -108,7 +102,7 @@ public class ActiveInstanceElectorServiceTest {
         when(configuration.getBoolean(HAConfiguration.ATLAS_SERVER_HA_ENABLED_KEY, false)).thenReturn(false);
 
         ActiveInstanceElectorService activeInstanceElectorService =
-                new ActiveInstanceElectorService(configuration, new ArrayList(), curatorFactory,
+                new ActiveInstanceElectorService(configuration, new HashSet<ActiveStateChangeHandler>(), curatorFactory,
                         activeInstanceState, serviceState);
         activeInstanceElectorService.start();
 
@@ -129,7 +123,7 @@ public class ActiveInstanceElectorServiceTest {
         when(curatorFactory.leaderLatchInstance("id1", HAConfiguration.ATLAS_SERVER_ZK_ROOT_DEFAULT)).thenReturn(leaderLatch);
 
         ActiveInstanceElectorService activeInstanceElectorService =
-                new ActiveInstanceElectorService(configuration, new ArrayList(), curatorFactory,
+                new ActiveInstanceElectorService(configuration, new HashSet<ActiveStateChangeHandler>(), curatorFactory,
                         activeInstanceState, serviceState);
         activeInstanceElectorService.start();
         activeInstanceElectorService.stop();
@@ -151,7 +145,7 @@ public class ActiveInstanceElectorServiceTest {
         when(curatorFactory.leaderLatchInstance("id1", HAConfiguration.ATLAS_SERVER_ZK_ROOT_DEFAULT)).thenReturn(leaderLatch);
 
         ActiveInstanceElectorService activeInstanceElectorService =
-                new ActiveInstanceElectorService(configuration, new ArrayList(), curatorFactory,
+                new ActiveInstanceElectorService(configuration, new HashSet<ActiveStateChangeHandler>(), curatorFactory,
                         activeInstanceState, serviceState);
         activeInstanceElectorService.start();
         activeInstanceElectorService.stop();
@@ -165,7 +159,7 @@ public class ActiveInstanceElectorServiceTest {
         when(configuration.getBoolean(HAConfiguration.ATLAS_SERVER_HA_ENABLED_KEY, false)).thenReturn(false);
 
         ActiveInstanceElectorService activeInstanceElectorService =
-                new ActiveInstanceElectorService(configuration, new ArrayList(), curatorFactory,
+                new ActiveInstanceElectorService(configuration, new HashSet<ActiveStateChangeHandler>(), curatorFactory,
                         activeInstanceState, serviceState);
         activeInstanceElectorService.stop();
 
@@ -185,26 +179,16 @@ public class ActiveInstanceElectorServiceTest {
         LeaderLatch leaderLatch = mock(LeaderLatch.class);
         when(curatorFactory.leaderLatchInstance("id1", HAConfiguration.ATLAS_SERVER_ZK_ROOT_DEFAULT)).thenReturn(leaderLatch);
 
-        Collection<Provider<ActiveStateChangeHandler>> changeHandlers = new ArrayList();
+        Set<ActiveStateChangeHandler> handlers = new HashSet<>();
+
         final ActiveStateChangeHandler handler1 = mock(ActiveStateChangeHandler.class);
         final ActiveStateChangeHandler handler2 = mock(ActiveStateChangeHandler.class);
 
-        changeHandlers.add(new Provider<ActiveStateChangeHandler>() {
-            @Override
-            public ActiveStateChangeHandler get() {
-                return handler1;
-            }
-        });
-
-        changeHandlers.add(new Provider<ActiveStateChangeHandler>() {
-            @Override
-            public ActiveStateChangeHandler get() {
-                return handler2;
-            }
-        });
+        handlers.add(handler1);
+        handlers.add(handler2);
 
         ActiveInstanceElectorService activeInstanceElectorService =
-                new ActiveInstanceElectorService(configuration, changeHandlers, curatorFactory,
+                new ActiveInstanceElectorService(configuration, handlers, curatorFactory,
                         activeInstanceState, serviceState);
         activeInstanceElectorService.start();
         activeInstanceElectorService.isLeader();
@@ -227,7 +211,7 @@ public class ActiveInstanceElectorServiceTest {
         when(curatorFactory.leaderLatchInstance("id1", HAConfiguration.ATLAS_SERVER_ZK_ROOT_DEFAULT)).thenReturn(leaderLatch);
 
         ActiveInstanceElectorService activeInstanceElectorService =
-                new ActiveInstanceElectorService(configuration, new ArrayList(), curatorFactory,
+                new ActiveInstanceElectorService(configuration, new HashSet<ActiveStateChangeHandler>(), curatorFactory,
                         activeInstanceState, serviceState);
 
         activeInstanceElectorService.start();
@@ -250,23 +234,12 @@ public class ActiveInstanceElectorServiceTest {
         LeaderLatch leaderLatch = mock(LeaderLatch.class);
         when(curatorFactory.leaderLatchInstance("id1", HAConfiguration.ATLAS_SERVER_ZK_ROOT_DEFAULT)).thenReturn(leaderLatch);
 
-        Collection<Provider<ActiveStateChangeHandler>> changeHandlers = new ArrayList();
+        Set<ActiveStateChangeHandler> changeHandlers = new HashSet<>();
         final ActiveStateChangeHandler handler1 = mock(ActiveStateChangeHandler.class);
         final ActiveStateChangeHandler handler2 = mock(ActiveStateChangeHandler.class);
 
-        changeHandlers.add(new Provider<ActiveStateChangeHandler>() {
-            @Override
-            public ActiveStateChangeHandler get() {
-                return handler1;
-            }
-        });
-
-        changeHandlers.add(new Provider<ActiveStateChangeHandler>() {
-            @Override
-            public ActiveStateChangeHandler get() {
-                return handler2;
-            }
-        });
+        changeHandlers.add(handler1);
+        changeHandlers.add(handler2);
 
         doThrow(new AtlasBaseException()).when(activeInstanceState).update("id1");
 
@@ -297,7 +270,7 @@ public class ActiveInstanceElectorServiceTest {
         doThrow(new AtlasBaseException()).when(activeInstanceState).update("id1");
 
         ActiveInstanceElectorService activeInstanceElectorService =
-                new ActiveInstanceElectorService(configuration, new ArrayList(), curatorFactory,
+                new ActiveInstanceElectorService(configuration, new HashSet<ActiveStateChangeHandler>(), curatorFactory,
                         activeInstanceState, serviceState);
 
         activeInstanceElectorService.start();
@@ -324,23 +297,12 @@ public class ActiveInstanceElectorServiceTest {
         LeaderLatch leaderLatch = mock(LeaderLatch.class);
         when(curatorFactory.leaderLatchInstance("id1", HAConfiguration.ATLAS_SERVER_ZK_ROOT_DEFAULT)).thenReturn(leaderLatch);
 
-        Collection<Provider<ActiveStateChangeHandler>> changeHandlers = new ArrayList();
+        Set<ActiveStateChangeHandler> changeHandlers = new HashSet<>();
         final ActiveStateChangeHandler handler1 = mock(ActiveStateChangeHandler.class);
         final ActiveStateChangeHandler handler2 = mock(ActiveStateChangeHandler.class);
 
-        changeHandlers.add(new Provider<ActiveStateChangeHandler>() {
-            @Override
-            public ActiveStateChangeHandler get() {
-                return handler1;
-            }
-        });
-
-        changeHandlers.add(new Provider<ActiveStateChangeHandler>() {
-            @Override
-            public ActiveStateChangeHandler get() {
-                return handler2;
-            }
-        });
+        changeHandlers.add(handler1);
+        changeHandlers.add(handler2);
 
         ActiveInstanceElectorService activeInstanceElectorService =
                 new ActiveInstanceElectorService(configuration, changeHandlers, curatorFactory,
@@ -355,7 +317,7 @@ public class ActiveInstanceElectorServiceTest {
     @Test
     public void testActiveStateSetOnBecomingLeader() {
         ActiveInstanceElectorService activeInstanceElectorService =
-                new ActiveInstanceElectorService(configuration, new ArrayList(),
+                new ActiveInstanceElectorService(configuration, new HashSet<ActiveStateChangeHandler>(),
                         curatorFactory, activeInstanceState, serviceState);
 
         activeInstanceElectorService.isLeader();
@@ -368,7 +330,7 @@ public class ActiveInstanceElectorServiceTest {
     @Test
     public void testPassiveStateSetOnLoosingLeadership() {
         ActiveInstanceElectorService activeInstanceElectorService =
-                new ActiveInstanceElectorService(configuration, new ArrayList(),
+                new ActiveInstanceElectorService(configuration, new HashSet<ActiveStateChangeHandler>(),
                         curatorFactory, activeInstanceState, serviceState);
 
         activeInstanceElectorService.notLeader();
@@ -395,7 +357,7 @@ public class ActiveInstanceElectorServiceTest {
         doThrow(new AtlasBaseException()).when(activeInstanceState).update("id1");
 
         ActiveInstanceElectorService activeInstanceElectorService =
-                new ActiveInstanceElectorService(configuration, new ArrayList(),
+                new ActiveInstanceElectorService(configuration, new HashSet<ActiveStateChangeHandler>(),
                         curatorFactory, activeInstanceState, serviceState);
         activeInstanceElectorService.start();
         activeInstanceElectorService.isLeader();

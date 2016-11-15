@@ -17,13 +17,10 @@
  */
 package org.apache.atlas.repository.typestore;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import javax.inject.Inject;
-
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import org.apache.atlas.ApplicationProperties;
 import org.apache.atlas.AtlasException;
-import org.apache.atlas.RepositoryMetadataModule;
 import org.apache.atlas.TestUtils;
 import org.apache.atlas.repository.graph.AtlasGraphProvider;
 import org.apache.atlas.typesystem.types.AttributeInfo;
@@ -34,22 +31,27 @@ import org.apache.atlas.typesystem.types.IDataType;
 import org.apache.atlas.typesystem.types.TraitType;
 import org.apache.atlas.typesystem.types.TypeSystem;
 import org.apache.atlas.typesystem.types.TypeUtils;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Guice;
+import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
+import javax.inject.Inject;
+import java.util.HashMap;
+import java.util.Map;
 
 
 /**
  * Unit test for {@link StoreBackedTypeCache}
  */
-@Guice(modules = RepositoryMetadataModule.class)
-public class StoreBackedTypeCacheTest {
+@ContextConfiguration(locations = { "classpath:test-context.xml" })
+@ActiveProfiles({"test"})
+public class StoreBackedTypeCacheTest extends AbstractTestNGSpringContextTests {
 
     @Inject
     private ITypeStore typeStore;
@@ -57,12 +59,14 @@ public class StoreBackedTypeCacheTest {
     @Inject
     private StoreBackedTypeCache typeCache;
 
+    @Inject
     private TypeSystem ts;
 
     private Map<String, ClassType> classTypesToTest = new HashMap<>();
 
-    @Inject
-    public StoreBackedTypeCacheTest() {
+    @BeforeTest
+    public void configureStoreProperty() throws AtlasException {
+        ApplicationProperties.get().addProperty("atlas.TypeCache.impl", "org.apache.atlas.repository.typestore.StoreBackedTypeCache");
     }
 
     @BeforeClass
@@ -70,7 +74,6 @@ public class StoreBackedTypeCacheTest {
         //force graph to be initialized up front
         TestUtils.getGraph();
 
-        ts = TypeSystem.getInstance();
         ts.reset();
         ts.setTypeCache(typeCache);
 

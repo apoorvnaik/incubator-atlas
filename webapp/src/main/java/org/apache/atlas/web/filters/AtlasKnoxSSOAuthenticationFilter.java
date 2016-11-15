@@ -20,7 +20,6 @@
 
 package org.apache.atlas.web.filters;
 
-import com.google.inject.Inject;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSObject;
 import com.nimbusds.jose.JWSVerifier;
@@ -80,7 +79,6 @@ public class AtlasKnoxSSOAuthenticationFilter implements Filter {
     private boolean ssoEnabled = false;
     private JWSVerifier verifier = null;
 
-    @Inject
     public AtlasKnoxSSOAuthenticationFilter() {
         try {
             configuration = ApplicationProperties.get();

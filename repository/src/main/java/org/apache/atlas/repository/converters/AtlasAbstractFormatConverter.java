@@ -20,9 +20,16 @@ package org.apache.atlas.repository.converters;
 
 import org.apache.atlas.model.TypeCategory;
 import org.apache.atlas.type.AtlasTypeRegistry;
+import org.springframework.stereotype.Service;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
 
+@Singleton
+@Service
 public abstract class AtlasAbstractFormatConverter implements AtlasFormatConverter {
+
+    @Inject
     protected final AtlasFormatConverters converterRegistry;
     protected final AtlasTypeRegistry     typeRegistry;
     protected final TypeCategory          typeCategory;

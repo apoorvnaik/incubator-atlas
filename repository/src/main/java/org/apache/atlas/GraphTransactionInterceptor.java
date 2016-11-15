@@ -17,28 +17,32 @@
 
 package org.apache.atlas;
 
-import org.aopalliance.intercept.MethodInterceptor;
-import org.aopalliance.intercept.MethodInvocation;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.repository.graph.AtlasGraphProvider;
 import org.apache.atlas.repository.graphdb.AtlasGraph;
 import org.apache.atlas.typesystem.exception.NotFoundException;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.Around;
+import org.aspectj.lang.annotation.Aspect;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
 import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.List;
 
-public class GraphTransactionInterceptor implements MethodInterceptor {
+@Aspect
+@Component
+public class GraphTransactionInterceptor {
     private static final Logger LOG = LoggerFactory.getLogger(GraphTransactionInterceptor.class);
 
     private static final ThreadLocal<List<PostTransactionHook>> postTransactionHooks = new ThreadLocal<>();
 
     private AtlasGraph graph;
 
-    @Override
-    public Object invoke(MethodInvocation invocation) throws Throwable {
+    @Around("execution(* * (..)) && @annotation(graphTransaction)")
+    public Object invoke(ProceedingJoinPoint joinPoint, GraphTransaction graphTransaction) throws Throwable {
         
         if (graph == null) {
             graph = AtlasGraphProvider.getGraphInstance();
@@ -48,7 +52,7 @@ public class GraphTransactionInterceptor implements MethodInterceptor {
 
         try {
             try {
-                Object response = invocation.proceed();
+                Object response = joinPoint.proceed();
                 graph.commit();
                 isSuccess = true;
 

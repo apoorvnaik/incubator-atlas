@@ -20,7 +20,6 @@ package org.apache.atlas.repository.store.graph.v1;
 import com.google.common.collect.ImmutableSet;
 import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.AtlasException;
-import org.apache.atlas.RepositoryMetadataModule;
 import org.apache.atlas.RequestContextV1;
 import org.apache.atlas.TestUtils;
 import org.apache.atlas.TestUtilsV2;
@@ -54,11 +53,13 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.RandomStringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeTest;
-import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
@@ -77,20 +78,22 @@ import static org.mockito.Mockito.mock;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
-@Guice(modules = RepositoryMetadataModule.class)
-public class AtlasEntityStoreV1Test {
+@ContextConfiguration(locations = { "classpath:test-context.xml" })
+@ActiveProfiles("test")
+public class AtlasEntityStoreV1Test extends AbstractTestNGSpringContextTests {
     private static final Logger LOG = LoggerFactory.getLogger(AtlasEntityStoreV1Test.class);
 
     @Inject
-    AtlasTypeRegistry typeRegistry;
+    private AtlasTypeRegistry typeRegistry;
 
     @Inject
-    AtlasTypeDefStore typeDefStore;
-
-    AtlasEntityStore entityStore;
+    private AtlasTypeDefStore typeDefStore;
 
     @Inject
-    MetadataService metadataService;
+    private AtlasEntityStore entityStore;
+
+    @Inject
+    private MetadataService metadataService;
 
     @Inject
     DeleteHandlerV1 deleteHandler;

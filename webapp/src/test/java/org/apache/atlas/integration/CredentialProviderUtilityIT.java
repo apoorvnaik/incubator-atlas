@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.atlas;
+package org.apache.atlas.integration;
 
 import org.apache.atlas.security.SecurityProperties;
 import org.apache.atlas.util.CredentialProviderUtility;

@@ -17,11 +17,14 @@
  */
 package org.apache.atlas.service;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import org.apache.atlas.ApplicationProperties;
+import org.apache.atlas.AtlasException;
 import org.apache.atlas.TestUtils;
 import org.apache.atlas.repository.graph.AtlasGraphProvider;
 import org.apache.atlas.repository.typestore.ITypeStore;
 import org.apache.atlas.repository.typestore.StoreBackedTypeCache;
-import org.apache.atlas.repository.typestore.StoreBackedTypeCacheTestModule;
 import org.apache.atlas.services.MetadataService;
 import org.apache.atlas.typesystem.TypesDef;
 import org.apache.atlas.typesystem.json.TypesSerialization;
@@ -32,18 +35,18 @@ import org.apache.atlas.typesystem.types.HierarchicalTypeDefinition;
 import org.apache.atlas.typesystem.types.Multiplicity;
 import org.apache.atlas.typesystem.types.TypeSystem;
 import org.apache.atlas.typesystem.types.TypeUpdateException;
-import org.apache.atlas.typesystem.types.cache.TypeCache;
 import org.apache.atlas.typesystem.types.utils.TypesUtil;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Guice;
+import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.inject.Inject;
+import javax.inject.Inject;
 
 
 /**
@@ -51,9 +54,9 @@ import com.google.inject.Inject;
  *  StoreBackedTypeCacheTestModule Guice module sets Atlas configuration
  *  to use {@link StoreBackedTypeCache} as the TypeCache implementation class.
  */
-@Guice(modules = StoreBackedTypeCacheTestModule.class)
-public class StoreBackedTypeCacheMetadataServiceTest
-{
+@ContextConfiguration(locations = { "classpath:test-context.xml" })
+@ActiveProfiles("test")
+public class StoreBackedTypeCacheMetadataServiceTest extends AbstractTestNGSpringContextTests {
     @Inject
     private MetadataService metadataService;
 
@@ -61,19 +64,20 @@ public class StoreBackedTypeCacheMetadataServiceTest
     private ITypeStore typeStore;
 
     @Inject
-    TypeCache typeCache;
-
     private StoreBackedTypeCache storeBackedTypeCache;
 
+    @Inject
     private TypeSystem ts;
+
+    @BeforeTest
+    public void configureStoreProperty() throws AtlasException {
+        ApplicationProperties.get().addProperty("atlas.TypeCache.impl", "org.apache.atlas.repository.typestore.StoreBackedTypeCache");
+    }
 
     @BeforeClass
     public void oneTimeSetup() throws Exception {
-        Assert.assertTrue(typeCache instanceof StoreBackedTypeCache);
-        storeBackedTypeCache = (StoreBackedTypeCache) typeCache;
-
-        ts = TypeSystem.getInstance();
         ts.reset();
+        ts.setTypeCache(storeBackedTypeCache);
 
         // Populate the type store for testing.
         TestUtils.defineDeptEmployeeTypes(ts);

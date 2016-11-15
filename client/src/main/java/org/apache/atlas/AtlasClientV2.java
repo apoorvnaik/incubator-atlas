@@ -24,7 +24,6 @@ import org.apache.atlas.model.SearchFilter;
 import org.apache.atlas.model.discovery.AtlasSearchResult;
 import org.apache.atlas.model.instance.AtlasClassification;
 import org.apache.atlas.model.instance.AtlasClassification.AtlasClassifications;
-import org.apache.atlas.model.instance.AtlasEntity;
 import org.apache.atlas.model.instance.AtlasEntity.AtlasEntitiesWithExtInfo;
 import org.apache.atlas.model.instance.AtlasEntity.AtlasEntityWithExtInfo;
 import org.apache.atlas.model.instance.EntityMutationResponse;
@@ -389,13 +388,13 @@ public class AtlasClientV2 extends AtlasBaseClient {
     }
 
     private <T> String getAtlasPath(Class<T> typeDefClass) {
-        if (typeDefClass.isAssignableFrom(AtlasEnumDef.class)) {
+        if (AtlasEnumDef.class.isAssignableFrom(typeDefClass)) {
             return "enumdef";
-        } else if (typeDefClass.isAssignableFrom(AtlasEntityDef.class)) {
+        } else if (AtlasEntityDef.class.isAssignableFrom(typeDefClass)) {
             return "entitydef";
-        } else if (typeDefClass.isAssignableFrom(AtlasClassificationDef.class)) {
+        } else if (AtlasClassificationDef.class.isAssignableFrom(typeDefClass)) {
             return "classificationdef";
-        } else if (typeDefClass.isAssignableFrom(AtlasStructDef.class)) {
+        } else if (AtlasStructDef.class.isAssignableFrom(typeDefClass)) {
             return "structdef";
         }
         // Code should never reach this point

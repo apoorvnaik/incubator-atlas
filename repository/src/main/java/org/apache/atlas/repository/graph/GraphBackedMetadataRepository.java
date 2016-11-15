@@ -18,17 +18,7 @@
 
 package org.apache.atlas.repository.graph;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
+import com.google.common.base.Preconditions;
 import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.CreateUpdateEntitiesResult;
@@ -55,16 +45,18 @@ import org.apache.atlas.typesystem.types.IDataType;
 import org.apache.atlas.typesystem.types.TypeSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
-import com.google.common.base.Preconditions;
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import java.util.*;
 
 /**
  * An implementation backed by a Graph database provided
  * as a Graph Service.
  */
 @Singleton
+@Component
 @Deprecated
 public class GraphBackedMetadataRepository implements MetadataRepository {
 
@@ -76,23 +68,15 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
 
     private DeleteHandler deleteHandler;
 
-    private final IAtlasGraphProvider graphProvider;
+    private final AtlasGraph atlasGraph;
     private final GraphToTypedInstanceMapper graphToInstanceMapper;
 
     @Inject
-    public GraphBackedMetadataRepository(DeleteHandler deleteHandler) {
-        this.graphProvider = new AtlasGraphProvider();
-        this.graphToInstanceMapper = new GraphToTypedInstanceMapper(graphProvider);
+    public GraphBackedMetadataRepository(DeleteHandler deleteHandler, AtlasGraph atlasGraph) {
+        this.atlasGraph = atlasGraph;
+        this.graphToInstanceMapper = new GraphToTypedInstanceMapper(atlasGraph);
         this.deleteHandler = deleteHandler;
     }
-
-    //for testing only
-    public GraphBackedMetadataRepository(IAtlasGraphProvider graphProvider, DeleteHandler deleteHandler) {
-        this.graphProvider = graphProvider;
-        this.graphToInstanceMapper = new GraphToTypedInstanceMapper(graphProvider);
-        this.deleteHandler = deleteHandler;
-    }
-
 
     public GraphToTypedInstanceMapper getGraphToInstanceMapper() {
         return graphToInstanceMapper;
@@ -513,6 +497,6 @@ public class GraphBackedMetadataRepository implements MetadataRepository {
     }
 
     public AtlasGraph getGraph() throws RepositoryException {
-        return graphProvider.get();
+        return atlasGraph;
     }
 }

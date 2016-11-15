@@ -18,10 +18,6 @@
 
 package org.apache.atlas.web.setup;
 
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import org.apache.atlas.ApplicationProperties;
-import org.apache.atlas.AtlasException;
 import org.apache.atlas.setup.SetupException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,30 +32,34 @@ public class AtlasSetup {
 
     private static final Logger LOG = LoggerFactory.getLogger(AtlasSetup.class);
 
-    private final Injector injector;
+//    private final Injector injector;
 
     public AtlasSetup() {
-        injector = Guice.createInjector(new AtlasSetupModule());
-        LOG.info("Got injector: {}", injector);
+//        injector = Guice.createInjector(new AtlasSetupModule());
+//        LOG.info("Got injector: {}", injector);
     }
 
     public static void main(String[] args) {
-        try {
-            AtlasSetup atlasSetup = new AtlasSetup();
-            atlasSetup.run();
-            LOG.info("Finished running all setup steps.");
-        } catch (SetupException e) {
-            LOG.error("Could not run setup step.", e);
-        }
+
+        // Do nothing since spring takes care of all this now
+        LOG.warn("Deprecated method calls. Spring config supersedes.");
+//        try {
+//            AtlasSetup atlasSetup = new AtlasSetup();
+//            atlasSetup.run();
+//            LOG.info("Finished running all setup steps.");
+//        } catch (SetupException e) {
+//            LOG.error("Could not run setup step.", e);
+//        }
     }
 
     public void run() throws SetupException {
-        SetupSteps setupSteps = injector.getInstance(SetupSteps.class);
-        LOG.info("Got setup steps.");
-        try {
-            setupSteps.runSetup(ApplicationProperties.get());
-        } catch (AtlasException e) {
-            throw new SetupException("Cannot get application properties.", e);
-        }
+        LOG.warn("Deprecated method calls. Spring config supersedes.");
+//        SetupSteps setupSteps = injector.getInstance(SetupSteps.class);
+//        LOG.info("Got setup steps.");
+//        try {
+//            setupSteps.runSetup(ApplicationProperties.get());
+//        } catch (AtlasException e) {
+//            throw new SetupException("Cannot get application properties.", e);
+//        }
     }
 }

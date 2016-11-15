@@ -17,8 +17,6 @@
  */
 package org.apache.atlas.repository.converters;
 
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
 import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasClient.EntityResult;
 import org.apache.atlas.AtlasErrorCode;
@@ -55,7 +53,10 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -64,18 +65,23 @@ import java.util.List;
 import java.util.Map;
 
 @Singleton
+@Component
 public class AtlasInstanceConverter {
 
     private static final Logger LOG = LoggerFactory.getLogger(AtlasInstanceConverter.class);
 
-    @Inject
     private AtlasTypeRegistry typeRegistry;
 
-    @Inject
     private AtlasFormatConverters instanceFormatters;
 
-    @Inject
     private MetadataService metadataService;
+
+    @Inject
+    public AtlasInstanceConverter(AtlasTypeRegistry typeRegistry, AtlasFormatConverters instanceFormatters, MetadataService metadataService) {
+        this.typeRegistry = typeRegistry;
+        this.instanceFormatters = instanceFormatters;
+        this.metadataService = metadataService;
+    }
 
     public ITypedReferenceableInstance[] getITypedReferenceables(Collection<AtlasEntity> entities) throws AtlasBaseException {
         ITypedReferenceableInstance[] entitiesInOldFormat = new ITypedReferenceableInstance[entities.size()];

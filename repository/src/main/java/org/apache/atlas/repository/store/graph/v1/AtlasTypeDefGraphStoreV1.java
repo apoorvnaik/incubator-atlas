@@ -19,8 +19,6 @@ package org.apache.atlas.repository.store.graph.v1;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.inject.Inject;
-
 import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.listener.TypeDefChangeListener;
@@ -31,11 +29,7 @@ import org.apache.atlas.repository.graphdb.AtlasEdge;
 import org.apache.atlas.repository.graphdb.AtlasEdgeDirection;
 import org.apache.atlas.repository.graphdb.AtlasGraph;
 import org.apache.atlas.repository.graphdb.AtlasVertex;
-import org.apache.atlas.repository.store.graph.AtlasClassificationDefStore;
-import org.apache.atlas.repository.store.graph.AtlasEntityDefStore;
-import org.apache.atlas.repository.store.graph.AtlasEnumDefStore;
-import org.apache.atlas.repository.store.graph.AtlasStructDefStore;
-import org.apache.atlas.repository.store.graph.AtlasTypeDefGraphStore;
+import org.apache.atlas.repository.store.graph.*;
 import org.apache.atlas.type.AtlasType;
 import org.apache.atlas.type.AtlasTypeRegistry;
 import org.apache.atlas.typesystem.types.DataTypes.TypeCategory;
@@ -43,13 +37,11 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
-import java.util.Date;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import java.util.*;
 
 import static org.apache.atlas.repository.Constants.TYPE_CATEGORY_PROPERTY_KEY;
 import static org.apache.atlas.repository.Constants.VERTEX_TYPE_PROPERTY_KEY;
@@ -59,6 +51,8 @@ import static org.apache.atlas.repository.store.graph.v1.AtlasGraphUtilsV1.VERTE
 /**
  * Graph persistence store for TypeDef - v1
  */
+@Singleton
+@Component
 public class AtlasTypeDefGraphStoreV1 extends AtlasTypeDefGraphStore {
     private static final Logger LOG = LoggerFactory.getLogger(AtlasTypeDefGraphStoreV1.class);
 

@@ -43,14 +43,14 @@ public class AtlasAuthenticationFailureHandler implements AuthenticationFailureH
         LOG.debug("Login Failure ", e);
 
         JSONObject json = new JSONObject();
-        ObjectMapper mapper = new ObjectMapper();
+//        ObjectMapper mapper = new ObjectMapper();
         json.put("msgDesc", e.getMessage());
 
-        String jsonAsStr = mapper.writeValueAsString(json);
+//        String jsonAsStr = mapper.writeValueAsString(json);
         response.setContentType("application/json");
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setCharacterEncoding("UTF-8");
-        response.getWriter().write(jsonAsStr);
+        response.getWriter().write(json.toJSONString());
 
     }
 }

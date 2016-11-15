@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.atlas.web.resources;
+package org.apache.atlas.integration;
 
 import com.google.common.collect.ImmutableSet;
 import com.sun.jersey.core.util.MultivaluedMapImpl;
@@ -37,7 +37,7 @@ import org.apache.atlas.typesystem.types.DataTypes;
 import org.apache.atlas.utils.AuthenticationUtil;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
-import org.testng.Assert;
+import org.apache.commons.lang3.tuple.Pair;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -48,7 +48,10 @@ import java.util.Collections;
 
 import static org.apache.atlas.model.typedef.AtlasStructDef.AtlasAttributeDef.Cardinality;
 import static org.apache.atlas.type.AtlasTypeUtil.createClassTypeDef;
-import static org.testng.Assert.*;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
 
 /**
  * Integration test for types jersey resource.
@@ -79,9 +82,10 @@ public class TypedefsJerseyResourceIT extends BaseResourceIT {
 
     @Test
     public void testCreate() throws Exception {
-        AtlasTypesDef atlasTypeDefs = clientV2.createAtlasTypeDefs(typeDefinitions);
-        Assert.assertNotNull(atlasTypeDefs);
-        assertFalse(atlasTypeDefs.isEmpty());
+        Pair<AtlasTypesDef, AtlasTypesDef> created = createType(typeDefinitions);
+        assertNotNull(created);
+        assertNotNull(created.getLeft());
+        assertNotNull(created.getRight());
     }
 
     @Test

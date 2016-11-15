@@ -18,7 +18,7 @@
 package org.apache.atlas.notification;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.inject.Inject;
+
 import org.apache.atlas.ApplicationProperties;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.listener.EntityChangeListener;
@@ -35,6 +35,7 @@ import org.apache.atlas.typesystem.types.TypeSystem;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.configuration.Configuration;
+import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -45,9 +46,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.inject.Inject;
+
 /**
  * Listen to the repository for entity changes and produce entity change notifications.
  */
+@Component
 public class NotificationEntityChangeListener implements EntityChangeListener {
 
     private final NotificationInterface notificationInterface;

@@ -35,6 +35,7 @@ import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -63,6 +64,7 @@ import java.util.List;
  */
 @Path("types")
 @Singleton
+@Service
 @Deprecated
 public class TypesResource {
     private static final Logger LOG = LoggerFactory.getLogger(TypesResource.class);

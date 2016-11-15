@@ -17,15 +17,12 @@
  */
 package org.apache.atlas.repository.graph;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.apache.atlas.CreateUpdateEntitiesResult;
-import org.apache.atlas.RepositoryMetadataModule;
 import org.apache.atlas.TestUtils;
 import org.apache.atlas.repository.MetadataRepository;
+import org.apache.atlas.repository.graphdb.AtlasGraph;
 import org.apache.atlas.type.AtlasTypeRegistry;
 import org.apache.atlas.typesystem.ITypedReferenceableInstance;
 import org.apache.atlas.typesystem.TypesDef;
@@ -39,25 +36,32 @@ import org.apache.atlas.typesystem.types.StructTypeDefinition;
 import org.apache.atlas.typesystem.types.TraitType;
 import org.apache.atlas.typesystem.types.TypeSystem;
 import org.apache.atlas.typesystem.types.utils.TypesUtil;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.inject.Inject;
+import javax.inject.Inject;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Verifies automatic update of reverse references
  *
  */
-@Guice(modules = RepositoryMetadataModule.class)
-public abstract class ReverseReferenceUpdateTestBase {
+@ContextConfiguration(locations = { "classpath:test-context.xml" })
+@ActiveProfiles("test")
+public abstract class ReverseReferenceUpdateTestBase extends AbstractTestNGSpringContextTests {
 
     @Inject
     MetadataRepository repositoryService;
+    @Inject
+    AtlasGraph atlasGraph;
 
     private TypeSystem typeSystem;
 
@@ -96,7 +100,7 @@ public abstract class ReverseReferenceUpdateTestBase {
         typeA = typeSystem.getDataType(ClassType.class, "A");
         typeB = typeSystem.getDataType(ClassType.class, "B");
 
-        repositoryService = new GraphBackedMetadataRepository(getDeleteHandler(typeSystem));
+        repositoryService = new GraphBackedMetadataRepository(getDeleteHandler(typeSystem), atlasGraph);
         repositoryService = TestUtils.addTransactionWrapper(repositoryService);
     }
 

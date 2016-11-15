@@ -22,7 +22,6 @@ import com.google.common.collect.ImmutableList;
 import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.BaseRepositoryTest;
-import org.apache.atlas.RepositoryMetadataModule;
 import org.apache.atlas.query.QueryParams;
 import org.apache.atlas.typesystem.ITypedReferenceableInstance;
 import org.apache.atlas.typesystem.Referenceable;
@@ -39,7 +38,6 @@ import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
-import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
@@ -55,7 +53,6 @@ import static org.testng.Assert.fail;
 /**
  * Unit tests for Hive LineageService.
  */
-@Guice(modules = RepositoryMetadataModule.class)
 public class DataSetLineageServiceTest extends BaseRepositoryTest {
 
     @Inject

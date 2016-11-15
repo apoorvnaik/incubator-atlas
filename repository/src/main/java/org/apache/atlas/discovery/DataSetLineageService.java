@@ -49,6 +49,7 @@ import org.apache.atlas.utils.ParamChecker;
 import org.apache.commons.configuration.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
 import scala.Option;
 import scala.Some;
@@ -59,6 +60,7 @@ import scala.collection.immutable.List;
  * Hive implementation of Lineage service interface.
  */
 @Singleton
+@Component
 public class DataSetLineageService implements LineageService {
 
     private static final Logger LOG = LoggerFactory.getLogger(DataSetLineageService.class);

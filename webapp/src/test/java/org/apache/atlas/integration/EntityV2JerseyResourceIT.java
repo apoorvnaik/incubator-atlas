@@ -16,29 +16,21 @@
  * limitations under the License.
  */
 
-package org.apache.atlas.web.resources;
+package org.apache.atlas.integration;
 
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertNull;
-import static org.testng.Assert.assertTrue;
-import static org.testng.Assert.fail;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
+import com.sun.jersey.api.client.ClientResponse;
 import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasServiceException;
 import org.apache.atlas.EntityAuditEvent;
 import org.apache.atlas.model.instance.AtlasClassification;
-import org.apache.atlas.model.instance.AtlasEntity;
-import org.apache.atlas.model.instance.AtlasEntityHeader;
-import org.apache.atlas.model.instance.AtlasEntity.AtlasEntityWithExtInfo;
-import org.apache.atlas.model.instance.AtlasObjectId;
 import org.apache.atlas.model.instance.AtlasClassification.AtlasClassifications;
+import org.apache.atlas.model.instance.AtlasEntity;
+import org.apache.atlas.model.instance.AtlasEntity.AtlasEntityWithExtInfo;
+import org.apache.atlas.model.instance.AtlasEntityHeader;
+import org.apache.atlas.model.instance.AtlasObjectId;
 import org.apache.atlas.model.instance.EntityMutationResponse;
 import org.apache.atlas.model.instance.EntityMutations;
 import org.apache.atlas.model.typedef.AtlasClassificationDef;
@@ -46,7 +38,6 @@ import org.apache.atlas.model.typedef.AtlasEntityDef;
 import org.apache.atlas.model.typedef.AtlasTypesDef;
 import org.apache.atlas.notification.NotificationConsumer;
 import org.apache.atlas.notification.NotificationInterface;
-import org.apache.atlas.notification.NotificationModule;
 import org.apache.atlas.notification.entity.EntityNotification;
 import org.apache.atlas.type.AtlasTypeUtil;
 import org.apache.atlas.typesystem.types.TypeUtils;
@@ -55,22 +46,21 @@ import org.codehaus.jettison.json.JSONArray;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
-import com.google.inject.Inject;
-import com.sun.jersey.api.client.ClientResponse;
+import javax.inject.Inject;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static org.testng.Assert.*;
 
 
 /**
  * Integration tests for Entity Jersey Resource.
  */
-@Guice(modules = {NotificationModule.class})
 public class EntityV2JerseyResourceIT extends BaseResourceIT {
 
     private static final Logger LOG = LoggerFactory.getLogger(EntityV2JerseyResourceIT.class);
@@ -147,7 +137,7 @@ public class EntityV2JerseyResourceIT extends BaseResourceIT {
         //the tables reference them.
 
         EntityMutationResponse response = atlasClientV2.createEntities(entities);
-        Assert.assertNotNull(response);
+        assertNotNull(response);
 
         Map<String,String> guidsCreated = response.getGuidAssignments();
         assertEquals(guidsCreated.size(), nTables * colsPerTable + nTables + 1);
@@ -316,7 +306,7 @@ public class EntityV2JerseyResourceIT extends BaseResourceIT {
         addProperty(createHiveTable().getGuid(), "description", description);
 
         AtlasEntity entityByGuid = getEntityByGuid(createHiveTable().getGuid());
-        Assert.assertNotNull(entityByGuid);
+        assertNotNull(entityByGuid);
 
         entityByGuid.setAttribute("description", description);
 
@@ -335,7 +325,7 @@ public class EntityV2JerseyResourceIT extends BaseResourceIT {
         addProperty(createHiveTable().getGuid(), "createTime", currentTime);
 
         entityByGuid = getEntityByGuid(createHiveTable().getGuid());
-        Assert.assertNotNull(entityByGuid);
+        assertNotNull(entityByGuid);
     }
 
     @Test
@@ -410,12 +400,12 @@ public class EntityV2JerseyResourceIT extends BaseResourceIT {
     @Test(dependsOnMethods = "testSubmitEntity")
     public void testCommonAttributes() throws Exception{
         AtlasEntity entity = getEntityByGuid(createHiveTable().getGuid());
-        Assert.assertNotNull(entity.getStatus());
-        Assert.assertNotNull(entity.getVersion());
-        Assert.assertNotNull(entity.getCreatedBy());
-        Assert.assertNotNull(entity.getCreateTime());
-        Assert.assertNotNull(entity.getUpdatedBy());
-        Assert.assertNotNull(entity.getUpdateTime());
+        assertNotNull(entity.getStatus());
+        assertNotNull(entity.getVersion());
+        assertNotNull(entity.getCreatedBy());
+        assertNotNull(entity.getCreateTime());
+        assertNotNull(entity.getUpdatedBy());
+        assertNotNull(entity.getUpdateTime());
     }
 
     private void addProperty(String guid, String property, Object value) throws AtlasServiceException {
@@ -592,7 +582,7 @@ public class EntityV2JerseyResourceIT extends BaseResourceIT {
             atlasClientV2.deleteClassification(guid, traitName);
             fail("Deletion should've failed for non-existent trait association");
         } catch (AtlasServiceException ex) {
-            Assert.assertNotNull(ex.getStatus());
+            assertNotNull(ex.getStatus());
             assertEquals(ex.getStatus(), ClientResponse.Status.NOT_FOUND);
         }
     }

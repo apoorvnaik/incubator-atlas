@@ -17,27 +17,32 @@
  */
 package org.apache.atlas.service;
 
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
+import org.apache.atlas.annotation.AtlasService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Profile;
 
-import java.util.Set;
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+import javax.inject.Inject;
+import java.util.List;
 
 /**
  * Utility for starting and stopping all services.
  */
-@Singleton
+@AtlasService
+@Profile("!test")
 public class Services {
     public static final Logger LOG = LoggerFactory.getLogger(Services.class);
 
-    private final Set<Service> services;
+    private final List<Service> services;
 
     @Inject
-    public Services(Set<Service> services) {
+    public Services(List<Service> services) {
         this.services = services;
     }
 
+    @PostConstruct
     public void start() {
         try {
             for (Service service : services) {
@@ -49,6 +54,7 @@ public class Services {
         }
     }
 
+    @PreDestroy
     public void stop() {
         for (Service service : services) {
             LOG.info("Stopping service {}", service.getClass().getName());

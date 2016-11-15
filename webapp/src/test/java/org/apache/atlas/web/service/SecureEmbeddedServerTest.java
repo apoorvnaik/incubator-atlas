@@ -31,6 +31,7 @@ import java.net.URL;
 
 import static org.apache.atlas.security.SecurityProperties.CERT_STORES_CREDENTIAL_PROVIDER_PATH;
 
+@Test(enabled = false)
 public class SecureEmbeddedServerTest extends SecureEmbeddedServerTestBase {
     @Test
     public void testServerConfiguredUsingCredentialProvider() throws Exception {

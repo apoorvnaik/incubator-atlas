@@ -18,31 +18,11 @@
 
 package org.apache.atlas.repository.graph;
 
-import static org.apache.atlas.typesystem.types.utils.TypesUtil.createClassTypeDef;
-import static org.apache.atlas.typesystem.types.utils.TypesUtil.createUniqueRequiredAttrDef;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertNotEquals;
-import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertTrue;
-
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-
-import javax.inject.Inject;
-
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.CreateUpdateEntitiesResult;
 import org.apache.atlas.GraphTransaction;
-import org.apache.atlas.RepositoryMetadataModule;
 import org.apache.atlas.RequestContext;
 import org.apache.atlas.TestUtils;
 import org.apache.atlas.discovery.graph.GraphBackedDiscoveryService;
@@ -77,17 +57,35 @@ import org.apache.atlas.typesystem.types.utils.TypesUtil;
 import org.apache.commons.lang.RandomStringUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONObject;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
+import scala.actors.threadpool.Arrays;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
+import javax.inject.Inject;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
-import java.util.Arrays;
+import static org.apache.atlas.typesystem.types.utils.TypesUtil.createClassTypeDef;
+import static org.apache.atlas.typesystem.types.utils.TypesUtil.createUniqueRequiredAttrDef;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotEquals;
+import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertTrue;
 
 /**
  * GraphBackedMetadataRepository test
@@ -95,8 +93,9 @@ import java.util.Arrays;
  * Guice loads the dependencies and injects the necessary objects
  *
  */
-@Guice(modules = RepositoryMetadataModule.class)
-public class GraphBackedMetadataRepositoryTest {
+@ContextConfiguration(locations = { "classpath:test-context.xml" })
+@ActiveProfiles("test")
+public class GraphBackedMetadataRepositoryTest extends AbstractTestNGSpringContextTests {
 
     @Inject
     private MetadataRepository repositoryService;
@@ -104,13 +103,14 @@ public class GraphBackedMetadataRepositoryTest {
     @Inject
     private GraphBackedDiscoveryService discoveryService;
 
+    @Inject
     private TypeSystem typeSystem;
+
     private String guid;
     private QueryParams queryParams = new QueryParams(100, 0);
 
     @BeforeClass
     public void setUp() throws Exception {
-        typeSystem = TypeSystem.getInstance();
         typeSystem.reset();
 
         assertTrue(repositoryService instanceof GraphBackedMetadataRepository);
@@ -128,7 +128,7 @@ public class GraphBackedMetadataRepositoryTest {
 
     @AfterClass
     public void tearDown() throws Exception {
-        TypeSystem.getInstance().reset();
+        typeSystem.reset();
         AtlasGraphProvider.cleanup();
     }
 

@@ -23,6 +23,7 @@ import org.apache.atlas.web.service.ServiceState;
 import org.apache.hadoop.http.HtmlQuoting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -47,6 +48,7 @@ import java.io.IOException;
  * {@link ServiceState} and {@link ActiveInstanceState}.
  */
 @Singleton
+@Component
 public class ActiveServerFilter implements Filter {
 
     private static final Logger LOG = LoggerFactory.getLogger(ActiveServerFilter.class);

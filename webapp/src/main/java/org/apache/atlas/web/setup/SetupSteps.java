@@ -19,8 +19,6 @@
 package org.apache.atlas.web.setup;
 
 import com.google.common.base.Charsets;
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
 import org.apache.atlas.AtlasConstants;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.ha.AtlasServerIdSelector;
@@ -38,11 +36,14 @@ import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
 @Singleton
+//@Service
 public class SetupSteps {
     private static final Logger LOG = LoggerFactory.getLogger(SetupSteps.class);
     public static final String SETUP_IN_PROGRESS_NODE = "/setup_in_progress";

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.atlas.web.resources;
+package org.apache.atlas.integration;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -25,7 +25,6 @@ import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasServiceException;
 import org.apache.atlas.typesystem.TypesDef;
 import org.apache.atlas.typesystem.json.TypesSerialization;
-import org.apache.atlas.typesystem.json.TypesSerialization$;
 import org.apache.atlas.typesystem.types.AttributeDefinition;
 import org.apache.atlas.typesystem.types.ClassType;
 import org.apache.atlas.typesystem.types.DataTypes;
@@ -219,12 +218,14 @@ public class TypesJerseyResourceIT extends BaseResourceIT {
     private String[] addTraits() throws Exception {
         String[] traitNames = {"class_trait", "secure_trait", "pii_trait", "ssn_trait", "salary_trait", "sox_trait",};
 
+        TypesDef traitsOnlyTypesDef = new TypesDef();
         for (String traitName : traitNames) {
             HierarchicalTypeDefinition<TraitType> traitTypeDef =
                     TypesUtil.createTraitTypeDef(traitName, ImmutableSet.<String>of());
-            String json = TypesSerialization$.MODULE$.toJson(traitTypeDef, true);
-            createType(json);
+            traitsOnlyTypesDef.traitTypesAsJavaList().add(traitTypeDef);
         }
+
+        createType(traitsOnlyTypesDef);
 
         return traitNames;
     }

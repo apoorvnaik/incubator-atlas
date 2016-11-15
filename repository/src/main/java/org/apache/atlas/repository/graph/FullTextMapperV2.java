@@ -17,7 +17,6 @@
  */
 package org.apache.atlas.repository.graph;
 
-import com.google.inject.Singleton;
 import org.apache.atlas.ApplicationProperties;
 import org.apache.atlas.RequestContext;
 import org.apache.atlas.exception.AtlasBaseException;
@@ -34,6 +33,7 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.configuration.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
 import javax.inject.Inject;
 import java.util.HashSet;
@@ -42,7 +42,7 @@ import java.util.Map;
 import java.util.Set;
 
 
-@Singleton
+@Component
 public class FullTextMapperV2 {
     private static final Logger LOG = LoggerFactory.getLogger(FullTextMapperV2.class);
 

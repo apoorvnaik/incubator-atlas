@@ -18,7 +18,6 @@
 
 package org.apache.atlas.notification;
 
-import com.google.inject.Inject;
 import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.AtlasServiceException;
@@ -35,20 +34,30 @@ import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.web.service.ServiceState;
 import org.apache.commons.lang.RandomStringUtils;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.Assert;
 import org.testng.annotations.AfterTest;
-import org.testng.annotations.BeforeTest;
-import org.testng.annotations.Guice;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
+
+import javax.inject.Inject;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyList;
 import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-@Guice(modules = NotificationModule.class)
-public class NotificationHookConsumerKafkaTest {
+@ContextConfiguration(locations = { "classpath:test-context.xml" })
+@ActiveProfiles("test")
+public class NotificationHookConsumerKafkaTest extends AbstractTestNGSpringContextTests {
 
     public static final String NAME = "name";
     public static final String DESCRIPTION = "description";
@@ -71,7 +80,7 @@ public class NotificationHookConsumerKafkaTest {
 
     private KafkaNotification kafkaNotification;
 
-    @BeforeTest
+    @BeforeClass
     public void setup() throws AtlasException, InterruptedException, AtlasBaseException {
         MockitoAnnotations.initMocks(this);
         AtlasType mockType = mock(AtlasType.class);
@@ -105,7 +114,7 @@ public class NotificationHookConsumerKafkaTest {
             produceMessage(new HookNotification.EntityCreateRequest("test_user2", createEntity()));
             consumeOneMessage(consumer, hookConsumer);
             verify(atlasEntityStore, times(2)).createOrUpdate(any(EntityStream.class), anyBoolean());
-            reset(atlasEntityStore);
+            Mockito.reset(atlasEntityStore);
         }
         finally {
             kafkaNotification.close();

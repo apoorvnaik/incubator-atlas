@@ -18,38 +18,43 @@
 
 package org.apache.atlas.web.security;
 
-import java.io.File;
-import java.util.Collection;
 import org.apache.atlas.ApplicationProperties;
 import org.apache.atlas.web.TestUtils;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.io.FileUtils;
 import org.junit.Assert;
 import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Test;
-import org.mockito.MockitoAnnotations;
 import org.testng.annotations.BeforeMethod;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.testng.annotations.Test;
+
+import javax.inject.Inject;
+import java.io.File;
+import java.util.Collection;
+
 import static org.mockito.Mockito.when;
 
-public class FileAuthenticationTest {
+@ContextConfiguration(locations = { "classpath:test-context.xml" })
+@ActiveProfiles("test")
+public class FileAuthenticationTest extends AbstractTestNGSpringContextTests {
 
-    private static ApplicationContext applicationContext = null;
-    private static AtlasAuthenticationProvider authProvider = null;
+    @Inject
+    private AtlasAuthenticationProvider authProvider;
     private String originalConf;
-    private static final Logger LOG = LoggerFactory
-            .getLogger(FileAuthenticationTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(FileAuthenticationTest.class);
     @Mock
-    Authentication authentication;
+    private Authentication authentication;
 
     @BeforeMethod
     public void setup1() {
@@ -67,12 +72,6 @@ public class FileAuthenticationTest {
         
         originalConf = System.getProperty("atlas.conf");
         System.setProperty("atlas.conf", persistDir);
-
-        applicationContext = new ClassPathXmlApplicationContext(
-                "spring-security.xml");
-        authProvider = applicationContext
-                .getBean(org.apache.atlas.web.security.AtlasAuthenticationProvider.class);
-
     }
 
     private void setUpAltasApplicationProperties(String persistDir) throws Exception {

@@ -29,8 +29,7 @@ import org.apache.atlas.ApplicationProperties;
 import org.apache.commons.configuration.Configuration;
 
 @Component
-public class AtlasAuthenticationProvider extends
-        AtlasAbstractAuthenticationProvider {
+public class AtlasAuthenticationProvider extends AtlasAbstractAuthenticationProvider {
     private static final Logger LOG = LoggerFactory
             .getLogger(AtlasAuthenticationProvider.class);
 
@@ -58,8 +57,7 @@ public class AtlasAuthenticationProvider extends
         try {
             Configuration configuration = ApplicationProperties.get();
 
-            this.fileAuthenticationMethodEnabled = configuration.getBoolean(
-                    FILE_AUTH_METHOD, true);
+            this.fileAuthenticationMethodEnabled = configuration.getBoolean(FILE_AUTH_METHOD, true);
 
             boolean ldapAuthenticationEnabled = configuration.getBoolean(LDAP_AUTH_METHOD, false);
 

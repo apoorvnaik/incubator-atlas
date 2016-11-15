@@ -62,6 +62,8 @@ import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -86,8 +88,9 @@ import java.util.Map;
  * An entity is an "instance" of a Type.  Entities conform to the definition
  * of the Type they correspond with.
  */
-@Path("entities")
 @Singleton
+@Path("entities")
+@Service
 @Deprecated
 public class EntityResource {
 

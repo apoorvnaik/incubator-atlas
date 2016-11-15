@@ -17,7 +17,6 @@
  */
 package org.apache.atlas.web.adapters;
 
-import org.apache.atlas.RepositoryMetadataModule;
 import org.apache.atlas.RequestContext;
 import org.apache.atlas.RequestContextV1;
 import org.apache.atlas.TestUtilsV2;
@@ -34,11 +33,13 @@ import org.apache.atlas.store.AtlasTypeDefStore;
 import org.apache.atlas.type.AtlasTypeUtil;
 import org.apache.atlas.web.rest.EntityREST;
 import org.mockito.Mockito;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.Assert;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
@@ -48,8 +49,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@Guice(modules = {RepositoryMetadataModule.class})
-public class TestEntityREST {
+@ContextConfiguration(locations = { "classpath:test-context.xml" })
+@ActiveProfiles("test")
+public class TestEntityREST extends AbstractTestNGSpringContextTests {
 
     @Inject
     private AtlasTypeDefStore typeStore;

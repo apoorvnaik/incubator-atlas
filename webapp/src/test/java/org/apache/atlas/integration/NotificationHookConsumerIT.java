@@ -16,25 +16,24 @@
  * limitations under the License.
  */
 
-package org.apache.atlas.notification;
+package org.apache.atlas.integration;
 
-import com.google.inject.Inject;
 import org.apache.atlas.EntityAuditEvent;
+import org.apache.atlas.notification.NotificationException;
+import org.apache.atlas.notification.NotificationInterface;
 import org.apache.atlas.notification.hook.HookNotification;
 import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.persistence.Id;
-import org.apache.atlas.web.resources.BaseResourceIT;
 import org.codehaus.jettison.json.JSONArray;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
+import javax.inject.Inject;
 import java.util.List;
 
 import static org.testng.Assert.assertEquals;
 
-@Guice(modules = NotificationModule.class)
 public class NotificationHookConsumerIT extends BaseResourceIT {
 
     private static final String TEST_USER = "testuser";
@@ -44,7 +43,7 @@ public class NotificationHookConsumerIT extends BaseResourceIT {
     public static final String CLUSTER_NAME = "clusterName";
 
     @Inject
-    private NotificationInterface kafka;
+    private NotificationInterface notificationInterface;
 
     @BeforeClass
     public void setUp() throws Exception {
@@ -54,11 +53,11 @@ public class NotificationHookConsumerIT extends BaseResourceIT {
 
     @AfterClass
     public void teardown() throws Exception {
-        kafka.close();
+        notificationInterface.close();
     }
 
     private void sendHookMessage(HookNotification.HookNotificationMessage message) throws NotificationException {
-        kafka.send(NotificationInterface.NotificationType.HOOK, message);
+        notificationInterface.send(NotificationInterface.NotificationType.HOOK, message);
     }
 
     @Test

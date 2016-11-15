@@ -37,6 +37,9 @@ import org.apache.atlas.type.AtlasTypeRegistry;
 import org.apache.atlas.type.AtlasTypeUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+import javax.inject.Inject;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -53,6 +56,7 @@ public class AtlasEntityGraphDiscoveryV1 implements EntityGraphDiscovery {
     private final AtlasTypeRegistry           typeRegistry;
     private final EntityGraphDiscoveryContext discoveryContext;
 
+    @Inject
     public AtlasEntityGraphDiscoveryV1(AtlasTypeRegistry typeRegistry, EntityStream entityStream) {
         this.typeRegistry     = typeRegistry;
         this.discoveryContext = new EntityGraphDiscoveryContext(typeRegistry, entityStream);

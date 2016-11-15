@@ -18,16 +18,7 @@
 
 package org.apache.atlas.repository.graph;
 
-import static junit.framework.Assert.assertTrue;
-import static org.apache.atlas.typesystem.types.utils.TypesUtil.createClassTypeDef;
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertNotNull;
-
-import java.util.Arrays;
-import java.util.Set;
-
 import org.apache.atlas.AtlasException;
-import org.apache.atlas.RepositoryMetadataModule;
 import org.apache.atlas.TestUtils;
 import org.apache.atlas.repository.Constants;
 import org.apache.atlas.repository.graphdb.AtlasGraph;
@@ -42,15 +33,24 @@ import org.apache.atlas.typesystem.types.HierarchicalTypeDefinition;
 import org.apache.atlas.typesystem.types.TypeSystem;
 import org.apache.atlas.typesystem.types.utils.TypesUtil;
 import org.apache.commons.lang.RandomStringUtils;
-import org.testng.annotations.Guice;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.annotations.Test;
 
-import com.google.inject.Inject;
+import javax.inject.Inject;
+import java.util.Arrays;
+import java.util.Set;
 
-@Guice(modules = RepositoryMetadataModule.class)
-public class GraphBackedSearchIndexerTest {
+import static junit.framework.Assert.assertTrue;
+import static org.apache.atlas.typesystem.types.utils.TypesUtil.createClassTypeDef;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotNull;
 
- 
+@ContextConfiguration(locations = { "classpath:test-context.xml" })
+@ActiveProfiles("test")
+public class GraphBackedSearchIndexerTest extends AbstractTestNGSpringContextTests {
+
     @Inject
     private GraphBackedSearchIndexer graphBackedSearchIndexer;
 

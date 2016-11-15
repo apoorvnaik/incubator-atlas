@@ -19,12 +19,21 @@
 package org.apache.atlas.repository;
 
 import org.apache.atlas.typesystem.types.TypeSystem;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
 import org.testng.annotations.BeforeMethod;
 
-public abstract class BaseTest {
+import javax.inject.Inject;
+
+@ContextConfiguration(locations = { "classpath:test-context.xml" })
+@ActiveProfiles("test")
+public abstract class BaseTest extends AbstractTestNGSpringContextTests {
+    @Inject
+    TypeSystem typeSystem;
+
     @BeforeMethod
     public void setup() throws Exception {
-        TypeSystem ts = TypeSystem.getInstance();
-        ts.reset();
+        typeSystem.reset();
     }
 }

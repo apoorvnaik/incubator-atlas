@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.atlas.web.resources;
+package org.apache.atlas.integration;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -89,14 +89,17 @@ public class EntityDiscoveryJerseyResourceIT extends BaseResourceIT {
 
         //higher limit, all results returned
         searchResult = atlasClientV2.dslSearchWithParams(dslQuery, 10, 0);
+        assertNotNull(searchResult.getEntities());
         assertEquals(searchResult.getEntities().size(), 1);
 
         //default limit and offset -1, all results returned
         searchResult = atlasClientV2.dslSearchWithParams(dslQuery, -1, -1);
+        assertNotNull(searchResult.getEntities());
         assertEquals(searchResult.getEntities().size(), 1);
 
         //uses the limit parameter passed
         searchResult = atlasClientV2.dslSearchWithParams(dslQuery, 1, 0);
+        assertNotNull(searchResult.getEntities());
         assertEquals(searchResult.getEntities().size(), 1);
 
         //uses the offset parameter passed

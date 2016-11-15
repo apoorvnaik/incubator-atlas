@@ -18,16 +18,6 @@
 
 package org.apache.atlas.discovery.graph;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-
-import javax.inject.Inject;
-import javax.inject.Singleton;
-
 import org.apache.atlas.AtlasClient;
 import org.apache.atlas.GraphTransaction;
 import org.apache.atlas.discovery.DiscoveryException;
@@ -56,6 +46,18 @@ import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import javax.script.ScriptException;
 
 import scala.util.Either;
 import scala.util.parsing.combinator.Parsers;
@@ -64,6 +66,7 @@ import scala.util.parsing.combinator.Parsers;
  * Graph backed implementation of Search.
  */
 @Singleton
+@Component
 public class GraphBackedDiscoveryService implements DiscoveryService {
 
     private static final Logger LOG = LoggerFactory.getLogger(GraphBackedDiscoveryService.class);

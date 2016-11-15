@@ -20,6 +20,7 @@ package org.apache.atlas.repository.store.graph.v1;
 import org.apache.atlas.model.instance.AtlasEntity;
 import org.apache.atlas.model.instance.AtlasEntity.AtlasEntityWithExtInfo;
 import org.apache.atlas.model.instance.AtlasEntity.AtlasEntitiesWithExtInfo;
+import org.springframework.stereotype.Component;
 
 import java.util.Iterator;
 
