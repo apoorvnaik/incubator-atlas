@@ -48,6 +48,7 @@ import org.apache.atlas.typesystem.types.HierarchicalTypeDefinition;
 import org.apache.atlas.typesystem.types.StructTypeDefinition;
 import org.apache.atlas.typesystem.types.TraitType;
 import org.apache.atlas.typesystem.types.utils.TypesUtil;
+import org.apache.atlas.utils.AuthenticationUtil;
 import org.apache.atlas.web.util.Servlets;
 import org.apache.commons.lang.RandomStringUtils;
 import org.codehaus.jettison.json.JSONArray;
@@ -72,7 +73,6 @@ import java.util.UUID;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.fail;
-import org.apache.atlas.utils.AuthenticationUtil;
 
 
 /**
@@ -111,7 +111,17 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
 
     @Test
     public void testSubmitEntity() throws Exception {
-        tableInstance = createHiveTableInstance(DATABASE_NAME, TABLE_NAME);
+        Referenceable dbInstance = createHiveDBInstance(DATABASE_NAME);
+
+        Id dbID = createInstance(dbInstance);
+        try {
+            Assert.assertNotNull(UUID.fromString(dbID._getId()));
+            dbInstance.replaceWithNewId(dbID);
+        } catch (IllegalArgumentException e) {
+            Assert.fail("Response is not a guid, " + dbID._getId());
+        }
+
+        tableInstance = createHiveTableInstance(dbInstance, TABLE_NAME);
         tableId = createInstance(tableInstance);
 
         final String guid = tableId._getId();
@@ -291,7 +301,11 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
     @Test
     public void testSubmitEntityWithBadDateFormat() throws Exception {
         try {
-            Referenceable tableInstance = createHiveTableInstance("db" + randomString(), "table" + randomString());
+            Referenceable hiveDBInstance = createHiveDBInstance("db" + randomString());
+            Id dbID = createInstance(hiveDBInstance);
+            hiveDBInstance.replaceWithNewId(dbID);
+
+            Referenceable tableInstance = createHiveTableInstance(hiveDBInstance, "table" + randomString());
             tableInstance.set("lastAccessTime", "2014-07-11");
             tableId = createInstance(tableInstance);
             Assert.fail("Was expecting an  exception here ");
