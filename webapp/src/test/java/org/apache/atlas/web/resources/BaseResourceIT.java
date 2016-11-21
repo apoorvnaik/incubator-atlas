@@ -24,9 +24,24 @@ import com.google.common.collect.ImmutableSet;
 import kafka.consumer.ConsumerTimeoutException;
 import org.apache.atlas.ApplicationProperties;
 import org.apache.atlas.AtlasClient;
+import org.apache.atlas.AtlasEntitiesClientV2;
 import org.apache.atlas.AtlasServiceException;
+import org.apache.atlas.AtlasTypedefClientV2;
+import org.apache.atlas.model.instance.AtlasClassification;
+import org.apache.atlas.model.instance.AtlasEntity;
+import org.apache.atlas.model.instance.AtlasEntityHeader;
+import org.apache.atlas.model.instance.AtlasEntityWithAssociations;
+import org.apache.atlas.model.instance.AtlasStruct;
+import org.apache.atlas.model.instance.EntityMutationResponse;
+import org.apache.atlas.model.instance.EntityMutations;
+import org.apache.atlas.model.typedef.AtlasClassificationDef;
+import org.apache.atlas.model.typedef.AtlasEntityDef;
+import org.apache.atlas.model.typedef.AtlasEnumDef;
+import org.apache.atlas.model.typedef.AtlasStructDef;
+import org.apache.atlas.model.typedef.AtlasTypesDef;
 import org.apache.atlas.notification.NotificationConsumer;
 import org.apache.atlas.notification.entity.EntityNotification;
+import org.apache.atlas.type.AtlasTypeUtil;
 import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.Struct;
 import org.apache.atlas.typesystem.TypesDef;
@@ -45,10 +60,14 @@ import org.slf4j.LoggerFactory;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Collections;
 import java.util.Map;
+
+import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertTrue;
 
 /**
  * Base class for integration tests.
@@ -57,7 +76,12 @@ import java.util.Map;
 public abstract class BaseResourceIT {
 
     public static final String ATLAS_REST_ADDRESS = "atlas.rest.address";
-    protected AtlasClient serviceClient;
+
+    // All service clients
+    protected AtlasClient atlasClientV1;
+    protected AtlasTypedefClientV2 typedefClientV2;
+    protected AtlasEntitiesClientV2 entitiesClientV2;
+
     public static final Logger LOG = LoggerFactory.getLogger(BaseResourceIT.class);
     protected static final int MAX_WAIT_TIME = 60000;
     protected String[] atlasUrls;
@@ -73,32 +97,69 @@ public abstract class BaseResourceIT {
         }
 
         if (!AuthenticationUtil.isKerberosAuthenticationEnabled()) {
-            serviceClient = new AtlasClient(atlasUrls, new String[]{"admin", "admin"});
+            atlasClientV1 = new AtlasClient(atlasUrls, new String[]{"admin", "admin"});
+            typedefClientV2 = new AtlasTypedefClientV2(atlasUrls, new String[]{"admin", "admin"});
+            entitiesClientV2 = new AtlasEntitiesClientV2(atlasUrls, new String[]{"admin", "admin"});
         } else {
-            serviceClient = new AtlasClient(atlasUrls);
+            atlasClientV1 = new AtlasClient(atlasUrls);
+            typedefClientV2 = new AtlasTypedefClientV2(atlasUrls);
+            entitiesClientV2 = new AtlasEntitiesClientV2(atlasUrls);
         }
+    }
+
+    protected void createType(AtlasTypesDef typesDef) {
+        // Since the bulk create bails out on a single failure, this has to be done as a workaround
+        for (AtlasEnumDef enumDef : typesDef.getEnumDefs()) {
+            try {
+                typedefClientV2.createEnumDef(enumDef);
+            } catch (AtlasServiceException ex) {
+                LOG.warn("EnumDef creation failed for {}", enumDef.getName());
+            }
+        }
+        for (AtlasStructDef structDef : typesDef.getStructDefs()) {
+            try {
+                typedefClientV2.createStructDef(structDef);
+            } catch (AtlasServiceException ex) {
+                LOG.warn("StructDef creation failed for {}", structDef.getName());
+            }
+        }
+        for (AtlasEntityDef entityDef : typesDef.getEntityDefs()) {
+            try {
+                typedefClientV2.createEntityDef(entityDef);
+            } catch (AtlasServiceException ex) {
+                LOG.warn("EntityDef creation failed for {}", entityDef.getName());
+            }
+        }
+        for (AtlasClassificationDef classificationDef : typesDef.getClassificationDefs()) {
+            try {
+                typedefClientV2.createClassificationDef(classificationDef);
+            } catch (AtlasServiceException ex) {
+                LOG.warn("ClassificationDef creation failed for {}", classificationDef.getName());
+            }
+        }
+
     }
 
     protected void createType(TypesDef typesDef) throws Exception {
         try{
             if ( !typesDef.enumTypes().isEmpty() ){
                 String sampleType = typesDef.enumTypesAsJavaList().get(0).name;
-                serviceClient.getType(sampleType);
+                atlasClientV1.getType(sampleType);
                 LOG.info("Checking enum type existence");
             }
             else if( !typesDef.structTypes().isEmpty()){
                 StructTypeDefinition sampleType = typesDef.structTypesAsJavaList().get(0);
-                serviceClient.getType(sampleType.typeName);
+                atlasClientV1.getType(sampleType.typeName);
                 LOG.info("Checking struct type existence");
             }
             else if( !typesDef.traitTypes().isEmpty()){
                 HierarchicalTypeDefinition<TraitType> sampleType = typesDef.traitTypesAsJavaList().get(0);
-                serviceClient.getType(sampleType.typeName);
+                atlasClientV1.getType(sampleType.typeName);
                 LOG.info("Checking trait type existence");
             }
             else{
                 HierarchicalTypeDefinition<ClassType> sampleType = typesDef.classTypesAsJavaList().get(0);
-                serviceClient.getType(sampleType.typeName);
+                atlasClientV1.getType(sampleType.typeName);
                 LOG.info("Checking class type existence");
             }
             LOG.info("Types already exist. Skipping type creation");
@@ -110,7 +171,7 @@ public abstract class BaseResourceIT {
     }
 
     protected List<String> createType(String typesAsJSON) throws Exception {
-        return serviceClient.createType(TypesSerialization.fromJson(typesAsJSON));
+        return atlasClientV1.createType(TypesSerialization.fromJson(typesAsJSON));
     }
 
     protected Id createInstance(Referenceable referenceable) throws Exception {
@@ -119,7 +180,7 @@ public abstract class BaseResourceIT {
 
         String entityJSON = InstanceSerialization.toJson(referenceable, true);
         System.out.println("Submitting new entity= " + entityJSON);
-        List<String> guids = serviceClient.createEntity(entityJSON);
+        List<String> guids = atlasClientV1.createEntity(entityJSON);
         System.out.println("created instance for type " + typeName + ", guid: " + guids);
 
         // return the reference to created instance with guid
@@ -147,12 +208,38 @@ public abstract class BaseResourceIT {
 
     }
 
+    protected AtlasEntityHeader modifyEntity(AtlasEntity atlasEntity, boolean update) {
+        EntityMutationResponse entity = null;
+        try {
+            if (!update) {
+                entity = entitiesClientV2.createEntity(atlasEntity);
+            } else {
+                entity = entitiesClientV2.updateEntity(atlasEntity);
+            }
+            assertNotNull(entity);
+            assertNotNull(entity.getEntitiesByOperation(EntityMutations.EntityOperation.CREATE_OR_UPDATE));
+            assertTrue(entity.getEntitiesByOperation(EntityMutations.EntityOperation.CREATE_OR_UPDATE).size() > 0);
+            return entity.getEntitiesByOperation(EntityMutations.EntityOperation.CREATE_OR_UPDATE).get(0);
+        } catch (AtlasServiceException e) {
+            LOG.error("Entity {} failed", update ? "update" : "creation", entity);
+        }
+        return null;
+    }
+
+    protected AtlasEntityHeader createEntity(AtlasEntity atlasEntity) {
+        return modifyEntity(atlasEntity, false);
+    }
+
+    protected AtlasEntityHeader updateEntity(AtlasEntity atlasEntity) {
+        return modifyEntity(atlasEntity, true);
+    }
+
     protected static final String DATABASE_TYPE = "hive_db";
     protected static final String HIVE_TABLE_TYPE = "hive_table";
     protected static final String COLUMN_TYPE = "hive_column";
     protected static final String HIVE_PROCESS_TYPE = "hive_process";
 
-    protected void createTypeDefinitions() throws Exception {
+    protected void createTypeDefinitionsV1() throws Exception {
         HierarchicalTypeDefinition<ClassType> dbClsDef = TypesUtil
                 .createClassTypeDef(DATABASE_TYPE, null,
                         TypesUtil.createUniqueRequiredAttrDef("name", DataTypes.STRING_TYPE),
@@ -180,9 +267,9 @@ public abstract class BaseResourceIT {
                         new AttributeDefinition("db", DATABASE_TYPE, Multiplicity.REQUIRED, true, null),
                         new AttributeDefinition("columns", DataTypes.arrayTypeName(COLUMN_TYPE),
                                 Multiplicity.OPTIONAL, true, null),
-                new AttributeDefinition("tableType", "tableType", Multiplicity.OPTIONAL, false, null),
-                new AttributeDefinition("serde1", "serdeType", Multiplicity.OPTIONAL, false, null),
-                new AttributeDefinition("serde2", "serdeType", Multiplicity.OPTIONAL, false, null));
+                        new AttributeDefinition("tableType", "tableType", Multiplicity.OPTIONAL, false, null),
+                        new AttributeDefinition("serde1", "serdeType", Multiplicity.OPTIONAL, false, null),
+                        new AttributeDefinition("serde2", "serdeType", Multiplicity.OPTIONAL, false, null));
 
         HierarchicalTypeDefinition<ClassType> loadProcessClsDef = TypesUtil
                 .createClassTypeDef(HIVE_PROCESS_TYPE, ImmutableSet.of("Process"),
@@ -226,6 +313,80 @@ public abstract class BaseResourceIT {
                 ImmutableList.of(dbClsDef, columnClsDef, tblClsDef, loadProcessClsDef)));
     }
 
+    protected void createTypeDefinitionsV2() throws Exception {
+        AtlasEntityDef dbClsTypeDef = AtlasTypeUtil.createClassTypeDef(
+                DATABASE_TYPE,
+                null,
+                AtlasTypeUtil.createUniqueRequiredAttrDef("name", "string"),
+                AtlasTypeUtil.createRequiredAttrDef("description", "string"),
+                AtlasTypeUtil.createOptionalAttrDef("locationUri", "string"),
+                AtlasTypeUtil.createOptionalAttrDef("owner", "string"),
+                AtlasTypeUtil.createOptionalAttrDef("createTime", "int"));
+
+        AtlasEntityDef columnClsDef = AtlasTypeUtil
+                .createClassTypeDef(COLUMN_TYPE, null,
+                        AtlasTypeUtil.createOptionalAttrDef("name", "string"),
+                        AtlasTypeUtil.createOptionalAttrDef("dataType", "string"),
+                        AtlasTypeUtil.createOptionalAttrDef("comment", "string"));
+
+        AtlasStructDef structTypeDef = AtlasTypeUtil.createStructTypeDef("serdeType",
+                AtlasTypeUtil.createRequiredAttrDef("name", "string"),
+                AtlasTypeUtil.createRequiredAttrDef("serde", "string")
+        );
+
+        AtlasEnumDef enumDef = new AtlasEnumDef("tableType", "description", Arrays.asList(
+                new AtlasEnumDef.AtlasEnumElementDef("MANAGED", null, 1),
+                new AtlasEnumDef.AtlasEnumElementDef("EXTERNAL", null, 2)
+        ));
+
+        AtlasEntityDef tblClsDef = AtlasTypeUtil
+                .createClassTypeDef(HIVE_TABLE_TYPE,
+                        ImmutableSet.of("DataSet"),
+                        AtlasTypeUtil.createOptionalAttrDef("owner", "string"),
+                        AtlasTypeUtil.createOptionalAttrDef("createTime", "long"),
+                        AtlasTypeUtil.createOptionalAttrDef("lastAccessTime", "date"),
+                        AtlasTypeUtil.createOptionalAttrDef("temporary", "boolean"),
+                        AtlasTypeUtil.createRequiredAttrDef("db", DATABASE_TYPE),
+                        AtlasTypeUtil.createRequiredAttrDef("columns", DataTypes.arrayTypeName(COLUMN_TYPE)),
+                        AtlasTypeUtil.createOptionalAttrDef("tableType", "tableType"),
+                        AtlasTypeUtil.createOptionalAttrDef("serde1", "serdeType"),
+                        AtlasTypeUtil.createOptionalAttrDef("serde2", "serdeType"));
+
+        AtlasEntityDef loadProcessClsDef = AtlasTypeUtil
+                .createClassTypeDef(HIVE_PROCESS_TYPE,
+                        ImmutableSet.of("Process"),
+                        AtlasTypeUtil.createOptionalAttrDef("userName", "string"),
+                        AtlasTypeUtil.createOptionalAttrDef("startTime", "int"),
+                        AtlasTypeUtil.createOptionalAttrDef("endTime", "long"),
+                        AtlasTypeUtil.createRequiredAttrDef("queryText", "string"),
+                        AtlasTypeUtil.createRequiredAttrDef("queryPlan", "string"),
+                        AtlasTypeUtil.createRequiredAttrDef("queryId", "string"),
+                        AtlasTypeUtil.createRequiredAttrDef("queryGraph", "string"));
+
+        AtlasClassificationDef classificationTrait = AtlasTypeUtil
+                .createTraitTypeDef("classification",ImmutableSet.<String>of(),
+                        AtlasTypeUtil.createRequiredAttrDef("tag", "string"));
+        AtlasClassificationDef piiTrait =
+                AtlasTypeUtil.createTraitTypeDef("pii", ImmutableSet.<String>of());
+        AtlasClassificationDef phiTrait =
+                AtlasTypeUtil.createTraitTypeDef("phi", ImmutableSet.<String>of());
+        AtlasClassificationDef pciTrait =
+                AtlasTypeUtil.createTraitTypeDef("pci", ImmutableSet.<String>of());
+        AtlasClassificationDef soxTrait =
+                AtlasTypeUtil.createTraitTypeDef("sox", ImmutableSet.<String>of());
+        AtlasClassificationDef secTrait =
+                AtlasTypeUtil.createTraitTypeDef("sec", ImmutableSet.<String>of());
+        AtlasClassificationDef financeTrait =
+                AtlasTypeUtil.createTraitTypeDef("finance", ImmutableSet.<String>of());
+
+        AtlasTypesDef typesDef = new AtlasTypesDef(ImmutableList.of(enumDef),
+                ImmutableList.of(structTypeDef),
+                ImmutableList.of(classificationTrait, piiTrait, phiTrait, pciTrait, soxTrait, secTrait, financeTrait),
+                ImmutableList.of(dbClsTypeDef, columnClsDef, tblClsDef, loadProcessClsDef));
+
+        createType(typesDef);
+    }
+
     AttributeDefinition attrDef(String name, IDataType dT) {
         return attrDef(name, dT, Multiplicity.OPTIONAL, false, null);
     }
@@ -245,7 +406,7 @@ public abstract class BaseResourceIT {
         return RandomStringUtils.randomAlphanumeric(10);
     }
 
-    protected Referenceable createHiveTableInstance(String dbName, String tableName, Id dbId) throws Exception {
+    protected Referenceable createHiveTableInstanceV1(String dbName, String tableName, Id dbId) throws Exception {
         Map<String, Object> values = new HashMap<>();
         values.put("name", dbName);
         values.put("description", "foo database");
@@ -255,7 +416,6 @@ public abstract class BaseResourceIT {
         values.put("parameters", Collections.EMPTY_MAP);
         values.put("location", "/tmp");
         Referenceable databaseInstance = new Referenceable(dbId._getId(), dbId.getTypeName(), values);
-
         Referenceable tableInstance =
                 new Referenceable(HIVE_TABLE_TYPE, "classification", "pii", "phi", "pci", "sox", "sec", "finance");
         tableInstance.set("name", tableName);
@@ -287,18 +447,68 @@ public abstract class BaseResourceIT {
         return tableInstance;
     }
 
-    protected Referenceable createHiveDBInstance(String dbName) {
+    protected AtlasEntityWithAssociations createHiveTableInstanceV2(AtlasEntity databaseInstance, String tableName) throws Exception {
+        AtlasEntityWithAssociations tableInstance =
+                new AtlasEntityWithAssociations(HIVE_TABLE_TYPE);
+        tableInstance.setClassifications(
+                Arrays.asList(new AtlasClassification("classification"),
+                        new AtlasClassification("pii"),
+                        new AtlasClassification("phi"),
+                        new AtlasClassification("pci"),
+                        new AtlasClassification("sox"),
+                        new AtlasClassification("sec"),
+                        new AtlasClassification("finance"))
+        );
+
+        tableInstance.setAttribute("name", tableName);
+        tableInstance.setAttribute(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, tableName);
+        tableInstance.setAttribute("db", databaseInstance);
+        tableInstance.setAttribute("description", "bar table");
+        tableInstance.setAttribute("lastAccessTime", "2014-07-11T08:00:00.000Z");
+        tableInstance.setAttribute("type", "managed");
+        tableInstance.setAttribute("level", 2);
+        tableInstance.setAttribute("tableType", 1); // enum
+        tableInstance.setAttribute("compressed", false);
+
+        AtlasClassification classification = tableInstance.getClassifications().get(0);
+        classification.setAttribute("tag", "foundation_etl");
+
+        AtlasStruct serde1Instance = new AtlasStruct("serdeType");
+        serde1Instance.setAttribute("name", "serde1");
+        serde1Instance.setAttribute("serde", "serde1");
+        tableInstance.setAttribute("serde1", serde1Instance);
+
+        AtlasStruct serde2Instance = new AtlasStruct("serdeType");
+        serde2Instance.setAttribute("name", "serde2");
+        serde2Instance.setAttribute("serde", "serde2");
+        tableInstance.setAttribute("serde2", serde2Instance);
+
+        List<AtlasClassification> traits = tableInstance.getClassifications();
+        Assert.assertEquals(traits.size(), 7);
+
+        return tableInstance;
+    }
+
+    protected Referenceable createHiveDBInstanceV1(String dbName) {
         Referenceable databaseInstance = new Referenceable(DATABASE_TYPE);
         databaseInstance.set("name", dbName);
         databaseInstance.set("qualifiedName", dbName);
         databaseInstance.set("clusterName", randomString());
         databaseInstance.set("description", "foo database");
-        databaseInstance.set(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, dbName);
-        databaseInstance.set("owner", "user1");
-        databaseInstance.set("clusterName", "cl1");
-        databaseInstance.set("parameters", Collections.EMPTY_MAP);
-        databaseInstance.set("location", "/tmp");
         return databaseInstance;
+    }
+
+    protected AtlasEntity createHiveDBInstanceV2(String dbName) {
+        AtlasEntity atlasEntity = new AtlasEntity(DATABASE_TYPE);
+        atlasEntity.setAttribute("name", dbName);
+        atlasEntity.setAttribute("qualifiedName", dbName);
+        atlasEntity.setAttribute("description", "foo database");
+        atlasEntity.setAttribute(AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, dbName);
+        atlasEntity.setAttribute("owner", "user1");
+        atlasEntity.setAttribute("clusterName", "cl1");
+        atlasEntity.setAttribute("parameters", Collections.EMPTY_MAP);
+        atlasEntity.setAttribute("location", "/tmp");
+        return atlasEntity;
     }
 
     public interface Predicate {
@@ -381,6 +591,6 @@ public abstract class BaseResourceIT {
     }
 
     protected JSONArray searchByDSL(String dslQuery) throws AtlasServiceException {
-        return serviceClient.searchByDSL(dslQuery, 10, 0);
+        return atlasClientV1.searchByDSL(dslQuery, 10, 0);
     }
 }

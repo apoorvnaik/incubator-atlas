@@ -60,13 +60,13 @@ public class EntityLineageJerseyResourceIT extends DataSetLineageJerseyResourceI
     public void setUp() throws Exception {
         super.setUp();
 
-        createTypeDefinitions();
+        createTypeDefinitionsV1();
         setupInstances();
     }
 
     @Test
     public void testInputLineageInfo() throws Exception {
-        String tableId = serviceClient.getEntity(HIVE_TABLE_TYPE,
+        String tableId = atlasClientV1.getEntity(HIVE_TABLE_TYPE,
                 AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, salesMonthlyTable).getId()._getId();
 
         MultivaluedMap<String, String> queryParams = new MultivaluedMapImpl();
@@ -94,7 +94,7 @@ public class EntityLineageJerseyResourceIT extends DataSetLineageJerseyResourceI
 
     @Test
     public void testOutputLineageInfo() throws Exception {
-        String tableId = serviceClient.getEntity(HIVE_TABLE_TYPE,
+        String tableId = atlasClientV1.getEntity(HIVE_TABLE_TYPE,
                 AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, salesFactTable).getId()._getId();
 
         MultivaluedMap<String, String> queryParams = new MultivaluedMapImpl();
@@ -122,7 +122,7 @@ public class EntityLineageJerseyResourceIT extends DataSetLineageJerseyResourceI
 
     @Test
     public void testLineageInfo() throws Exception {
-        String tableId = serviceClient.getEntity(HIVE_TABLE_TYPE,
+        String tableId = atlasClientV1.getEntity(HIVE_TABLE_TYPE,
                 AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, salesMonthlyTable).getId()._getId();
 
         MultivaluedMap<String, String> queryParams = new MultivaluedMapImpl();

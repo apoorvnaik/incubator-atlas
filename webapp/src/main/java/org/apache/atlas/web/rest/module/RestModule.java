@@ -18,7 +18,6 @@
 package org.apache.atlas.web.rest.module;
 
 import com.google.inject.AbstractModule;
-
 import org.apache.atlas.type.AtlasTypeRegistry;
 
 public class RestModule extends AbstractModule {

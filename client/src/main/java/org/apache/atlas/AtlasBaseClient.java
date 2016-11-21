@@ -276,6 +276,9 @@ public abstract class AtlasBaseClient {
         ClientResponse clientResponse = null;
         int i = 0;
         do {
+            String logMsg = "Calling API [ " + api.getMethod() +" : " + api.getPath() + " ]"
+                    + (requestObject != null ? "<== " + requestObject : "");
+            LOG.debug(logMsg);
             clientResponse = resource
                     .accept(JSON_MEDIA_TYPE)
                     .type(JSON_MEDIA_TYPE)
@@ -399,6 +402,12 @@ public abstract class AtlasBaseClient {
         return callAPIWithResource(api, getResource(api, params), requestObject, responseType);
     }
 
+    public <T> T callAPI(APIInfo api, Object requestBody, Class<T> responseType,
+                         MultivaluedMap<String, String> queryParams, String... params) throws AtlasServiceException {
+        WebResource resource = getResource(api, queryParams, params);
+        return callAPIWithResource(api, resource, requestBody, responseType);
+    }
+
     public <T> T callAPI(APIInfo api, Class<T> responseType, MultivaluedMap<String, String> queryParams, String... params)
             throws AtlasServiceException {
         WebResource resource = getResource(api, queryParams, params);
@@ -476,7 +485,7 @@ public abstract class AtlasBaseClient {
         return resource;
     }
 
-    protected APIInfo formatPath(APIInfo apiInfo, String ... params) {
+    protected APIInfo formatPathForPathParams(APIInfo apiInfo, String ... params) {
         return new APIInfo(String.format(apiInfo.getPath(), params), apiInfo.getMethod(), apiInfo.getExpectedStatus());
     }
 

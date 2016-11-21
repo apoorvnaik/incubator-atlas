@@ -45,7 +45,7 @@ public class NotificationHookConsumerIT extends BaseResourceIT {
     @BeforeClass
     public void setUp() throws Exception {
         super.setUp();
-        createTypeDefinitions();
+        createTypeDefinitionsV1();
     }
 
     @AfterClass
@@ -101,9 +101,9 @@ public class NotificationHookConsumerIT extends BaseResourceIT {
         });
 
         //Assert that user passed in hook message is used in audit
-        Referenceable instance = serviceClient.getEntity(DATABASE_TYPE, "qualifiedName", (String) entity.get("qualifiedName"));
+        Referenceable instance = atlasClientV1.getEntity(DATABASE_TYPE, "qualifiedName", (String) entity.get("qualifiedName"));
         List<EntityAuditEvent> events =
-                serviceClient.getEntityAuditEvents(instance.getId()._getId(), (short) 1);
+                atlasClientV1.getEntityAuditEvents(instance.getId()._getId(), (short) 1);
         assertEquals(events.size(), 1);
         assertEquals(events.get(0).getUser(), TEST_USER);
     }
@@ -117,7 +117,7 @@ public class NotificationHookConsumerIT extends BaseResourceIT {
         entity.set("qualifiedName", dbName);
         entity.set("clusterName", randomString());
 
-        serviceClient.createEntity(entity);
+        atlasClientV1.createEntity(entity);
 
         final Referenceable newEntity = new Referenceable(DATABASE_TYPE);
         newEntity.set("owner", randomString());
@@ -126,13 +126,13 @@ public class NotificationHookConsumerIT extends BaseResourceIT {
         waitFor(MAX_WAIT_TIME, new Predicate() {
             @Override
             public boolean evaluate() throws Exception {
-                Referenceable localEntity = serviceClient.getEntity(DATABASE_TYPE, "qualifiedName", dbName);
+                Referenceable localEntity = atlasClientV1.getEntity(DATABASE_TYPE, "qualifiedName", dbName);
                 return (localEntity.get("owner") != null && localEntity.get("owner").equals(newEntity.get("owner")));
             }
         });
 
         //Its partial update and un-set fields are not updated
-        Referenceable actualEntity = serviceClient.getEntity(DATABASE_TYPE, "qualifiedName", dbName);
+        Referenceable actualEntity = atlasClientV1.getEntity(DATABASE_TYPE, "qualifiedName", dbName);
         assertEquals(actualEntity.get("description"), entity.get("description"));
     }
 
@@ -145,7 +145,7 @@ public class NotificationHookConsumerIT extends BaseResourceIT {
         entity.set("qualifiedName", dbName);
         entity.set("clusterName", randomString());
 
-        serviceClient.createEntity(entity);
+        atlasClientV1.createEntity(entity);
 
         final Referenceable newEntity = new Referenceable(DATABASE_TYPE);
         final String newName = "db" + randomString();
@@ -176,14 +176,14 @@ public class NotificationHookConsumerIT extends BaseResourceIT {
         entity.set("qualifiedName", dbName);
         entity.set("clusterName", randomString());
 
-        final String dbId = serviceClient.createEntity(entity).get(0);
+        final String dbId = atlasClientV1.createEntity(entity).get(0);
 
         sendHookMessage(
             new HookNotification.EntityDeleteRequest(TEST_USER, DATABASE_TYPE, "qualifiedName", dbName));
         waitFor(MAX_WAIT_TIME, new Predicate() {
             @Override
             public boolean evaluate() throws Exception {
-                Referenceable getEntity = serviceClient.getEntity(dbId);
+                Referenceable getEntity = atlasClientV1.getEntity(dbId);
                 return getEntity.getId().getState() == Id.EntityState.DELETED;
             }
         });
@@ -198,7 +198,7 @@ public class NotificationHookConsumerIT extends BaseResourceIT {
         entity.set("qualifiedName", dbName);
         entity.set("clusterName", randomString());
 
-        serviceClient.createEntity(entity);
+        atlasClientV1.createEntity(entity);
 
         final Referenceable newEntity = new Referenceable(DATABASE_TYPE);
         newEntity.set("name", randomString());
@@ -217,7 +217,7 @@ public class NotificationHookConsumerIT extends BaseResourceIT {
             }
         });
 
-        Referenceable actualEntity = serviceClient.getEntity(DATABASE_TYPE, "qualifiedName", dbName);
+        Referenceable actualEntity = atlasClientV1.getEntity(DATABASE_TYPE, "qualifiedName", dbName);
         assertEquals(actualEntity.get("description"), newEntity.get("description"));
         assertEquals(actualEntity.get("owner"), newEntity.get("owner"));
     }

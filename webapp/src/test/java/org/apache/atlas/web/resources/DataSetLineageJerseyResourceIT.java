@@ -53,7 +53,7 @@ public class DataSetLineageJerseyResourceIT extends BaseResourceIT {
     public void setUp() throws Exception {
         super.setUp();
 
-        createTypeDefinitions();
+        createTypeDefinitionsV1();
         setupInstances();
     }
 
@@ -78,9 +78,9 @@ public class DataSetLineageJerseyResourceIT extends BaseResourceIT {
 
     @Test
     public void testInputsGraphForEntity() throws Exception {
-        String tableId = serviceClient.getEntity(HIVE_TABLE_TYPE, AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME,
+        String tableId = atlasClientV1.getEntity(HIVE_TABLE_TYPE, AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME,
                 salesMonthlyTable).getId()._getId();
-        JSONObject results = serviceClient.getInputGraphForEntity(tableId);
+        JSONObject results = atlasClientV1.getInputGraphForEntity(tableId);
         Assert.assertNotNull(results);
 
         Struct resultsInstance = InstanceSerialization.fromJsonStruct(results.toString(), true);
@@ -114,9 +114,9 @@ public class DataSetLineageJerseyResourceIT extends BaseResourceIT {
 
     @Test
     public void testOutputsGraphForEntity() throws Exception {
-        String tableId = serviceClient.getEntity(HIVE_TABLE_TYPE, AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME,
+        String tableId = atlasClientV1.getEntity(HIVE_TABLE_TYPE, AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME,
                 salesFactTable).getId()._getId();
-        JSONObject results = serviceClient.getOutputGraphForEntity(tableId);
+        JSONObject results = atlasClientV1.getOutputGraphForEntity(tableId);
         Assert.assertNotNull(results);
 
         Struct resultsInstance = InstanceSerialization.fromJsonStruct(results.toString(), true);
@@ -156,8 +156,8 @@ public class DataSetLineageJerseyResourceIT extends BaseResourceIT {
 
     @Test
     public void testSchemaForEntity() throws Exception {
-        String tableId = serviceClient.getEntity(HIVE_TABLE_TYPE, AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, salesFactTable).getId()._getId();
-        JSONObject results = serviceClient.getSchemaForEntity(tableId);
+        String tableId = atlasClientV1.getEntity(HIVE_TABLE_TYPE, AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, salesFactTable).getId()._getId();
+        JSONObject results = atlasClientV1.getSchemaForEntity(tableId);
         Assert.assertNotNull(results);
 
         JSONArray rows = results.getJSONArray("rows");
