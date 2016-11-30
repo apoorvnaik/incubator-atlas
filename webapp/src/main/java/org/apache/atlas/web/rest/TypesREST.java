@@ -18,7 +18,6 @@
 package org.apache.atlas.web.rest;
 
 import com.google.inject.Inject;
-
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.SearchFilter;
 import org.apache.atlas.model.typedef.AtlasClassificationDef;
@@ -35,11 +34,6 @@ import org.apache.atlas.store.AtlasTypeDefStore;
 import org.apache.atlas.type.AtlasTypeUtil;
 import org.apache.atlas.web.util.Servlets;
 import org.apache.http.annotation.Experimental;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.List;
-import java.util.Set;
 
 import javax.inject.Singleton;
 import javax.servlet.http.HttpServletRequest;
@@ -54,12 +48,13 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
+import java.util.List;
+import java.util.Set;
 
 
 @Path("v2/types")
 @Singleton
 public class TypesREST {
-    private static final Logger LOG = LoggerFactory.getLogger(TypesREST.class);
 
     private AtlasTypeDefStore typeDefStore;
 

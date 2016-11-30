@@ -17,18 +17,18 @@
  */
 package org.apache.atlas.model;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.codehaus.jackson.annotate.JsonAutoDetect;
-import static org.codehaus.jackson.annotate.JsonAutoDetect.Visibility.PUBLIC_ONLY;
-import static org.codehaus.jackson.annotate.JsonAutoDetect.Visibility.NONE;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.map.annotate.JsonSerialize;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.codehaus.jackson.annotate.JsonAutoDetect.Visibility.NONE;
+import static org.codehaus.jackson.annotate.JsonAutoDetect.Visibility.PUBLIC_ONLY;
 
 /**
  * Generic filter, to specify search criteria using name/value pairs.
@@ -40,6 +40,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 @XmlAccessorType(XmlAccessType.PROPERTY)
 public class SearchFilter {
     public static final String PARAM_TYPE = "type";
+    public static final String PARAM_NAME = "name";
     public static final String PARAM_SUPERTYPE = "supertype";
     public static final String PARAM_NOT_SUPERTYPE = "notsupertype";
 
