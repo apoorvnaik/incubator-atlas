@@ -15,8 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.atlas.web.adapters;
+package org.apache.atlas.repository.converters;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.AtlasException;
@@ -48,8 +50,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
 import java.util.Iterator;
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
 import java.util.Map;
 
 @Singleton

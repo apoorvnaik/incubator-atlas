@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.atlas.web.adapters;
+package org.apache.atlas.repository.converters;
 
 import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.AtlasException;
@@ -83,7 +83,7 @@ public class AtlasEntityFormatConverter extends AtlasStructFormatConverter {
                     entity.setCreateTime(entRef.getSystemAttributes().createdTime);
                     entity.setUpdatedBy(entRef.getSystemAttributes().modifiedBy);
                     entity.setUpdateTime(entRef.getSystemAttributes().modifiedTime);
-                    entity.setVersion(new Long(entRef.getId().version));
+                    entity.setVersion((long) entRef.getId().version);
 
                     if (CollectionUtils.isNotEmpty(entRef.getTraits())) {
                         List<AtlasClassification> classifications = new ArrayList<>();
@@ -110,7 +110,7 @@ public class AtlasEntityFormatConverter extends AtlasStructFormatConverter {
         return ret;
     }
 
-    private AtlasEntity.Status convertState(EntityState state){
+    private Status convertState(EntityState state){
         Status status = Status.ACTIVE;
         if(state != null && state.equals(EntityState.DELETED)){
             status = Status.DELETED;

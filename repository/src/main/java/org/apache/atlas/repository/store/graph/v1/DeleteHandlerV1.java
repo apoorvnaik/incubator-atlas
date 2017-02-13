@@ -207,10 +207,9 @@ public abstract class DeleteHandlerV1 {
     public boolean deleteEdgeReference(AtlasEdge edge, TypeCategory typeCategory, boolean isComposite,
         boolean forceDeleteStructTrait) throws AtlasBaseException {
         LOG.debug("Deleting {}", string(edge));
-        boolean forceDelete =
-            (typeCategory == TypeCategory.STRUCT || typeCategory == TypeCategory.CLASSIFICATION) && forceDeleteStructTrait;
-        if (typeCategory == TypeCategory.STRUCT || typeCategory == TypeCategory.CLASSIFICATION
-            || (typeCategory == TypeCategory.ENTITY && isComposite)) {
+        boolean isClassificationOrStruct = typeCategory == TypeCategory.STRUCT || typeCategory == TypeCategory.CLASSIFICATION;
+        boolean forceDelete = isClassificationOrStruct && forceDeleteStructTrait;
+        if (isClassificationOrStruct || (typeCategory == TypeCategory.ENTITY && isComposite)) {
             //If the vertex is of type struct/trait, delete the edge and then the reference vertex as the vertex is not shared by any other entities.
             //If the vertex is of type class, and its composite attribute, this reference vertex' lifecycle is controlled
             //through this delete, hence delete the edge and the reference vertex.
