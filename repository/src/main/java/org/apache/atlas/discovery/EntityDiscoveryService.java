@@ -17,13 +17,14 @@
  */
 package org.apache.atlas.discovery;
 
+import com.google.inject.Singleton;
 import org.apache.atlas.AtlasConfiguration;
-import org.apache.atlas.model.discovery.AtlasSearchResult.AtlasFullTextResult;
-import org.apache.atlas.model.discovery.AtlasSearchResult.AtlasQueryType;
-import org.apache.atlas.model.discovery.AtlasSearchResult.AttributeSearchResult;
 import org.apache.atlas.discovery.graph.DefaultGraphPersistenceStrategy;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.discovery.AtlasSearchResult;
+import org.apache.atlas.model.discovery.AtlasSearchResult.AtlasFullTextResult;
+import org.apache.atlas.model.discovery.AtlasSearchResult.AtlasQueryType;
+import org.apache.atlas.model.discovery.AtlasSearchResult.AttributeSearchResult;
 import org.apache.atlas.model.instance.AtlasEntityHeader;
 import org.apache.atlas.query.Expressions.AliasExpression;
 import org.apache.atlas.query.Expressions.Expression;
@@ -47,7 +48,6 @@ import org.apache.atlas.type.AtlasClassificationType;
 import org.apache.atlas.type.AtlasEntityType;
 import org.apache.atlas.type.AtlasTypeRegistry;
 import org.apache.atlas.util.AtlasGremlinQueryProvider;
-import org.apache.atlas.util.AtlasGremlinQueryProvider.AtlasGremlinQuery;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
@@ -58,19 +58,18 @@ import scala.util.Either;
 import scala.util.parsing.combinator.Parsers.NoSuccess;
 
 import javax.inject.Inject;
-import javax.script.ScriptEngine;
 import javax.script.ScriptException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.apache.atlas.AtlasErrorCode.CLASSIFICATION_NOT_FOUND;
 import static org.apache.atlas.AtlasErrorCode.DISCOVERY_QUERY_FAILED;
 import static org.apache.atlas.AtlasErrorCode.UNKNOWN_TYPENAME;
-import static org.apache.atlas.AtlasErrorCode.CLASSIFICATION_NOT_FOUND;
 
+@Singleton
 public class EntityDiscoveryService implements AtlasDiscoveryService {
     private static final Logger LOG = LoggerFactory.getLogger(EntityDiscoveryService.class);
 
@@ -172,6 +171,12 @@ public class EntityDiscoveryService implements AtlasDiscoveryService {
         Set<String>       typeNames           = null;
         Set<String>       classificationNames = null;
 
+        // if query was provided, perform indexQuery and filter for typeName & classification in memory; this approach
+        // results in a faster and accurate results than using CONTAINS/CONTAINS_PREFIX filter on entityText property
+        boolean isValidIndexQuery = false;
+        StringBuilder indexQryBuilder = new StringBuilder("v.")
+                .append("\"").append(Constants.ENTITY_TEXT_PROPERTY_KEY).append("\"").append(":(");
+
         if (StringUtils.isNotEmpty(typeName)) {
             AtlasEntityType entityType = typeRegistry.getEntityTypeByName(typeName);
 
@@ -180,6 +185,14 @@ public class EntityDiscoveryService implements AtlasDiscoveryService {
             }
 
             typeNames = entityType.getTypeAndAllSubTypes();
+
+            indexQryBuilder.append("(");
+
+            buildAllSubtypeConstruct(typeNames, indexQryBuilder);
+
+            indexQryBuilder.append(")");
+
+            isValidIndexQuery = true;
 
             ret.setType(typeName);
         }
@@ -193,14 +206,39 @@ public class EntityDiscoveryService implements AtlasDiscoveryService {
 
             classificationNames = classificationType.getTypeAndAllSubTypes();
 
+            if (isValidIndexQuery) {
+                indexQryBuilder.append(" AND ");
+            }
+
+            indexQryBuilder.append("(");
+
+            buildAllSubtypeConstruct(classificationNames, indexQryBuilder);
+
+            indexQryBuilder.append(")");
+
+            isValidIndexQuery = true;
+
             ret.setClassification(classification);
         }
 
-        // if query was provided, perform indexQuery and filter for typeName & classification in memory; this approach
-        // results in a faster and accurate results than using CONTAINS/CONTAINS_PREFIX filter on entityText property
         if (StringUtils.isNotEmpty(query)) {
-            final String                idxQuery   = String.format("v.\"%s\":(%s)", Constants.ENTITY_TEXT_PROPERTY_KEY, query);
-            final Iterator<Result<?,?>> qryResult  = graph.indexQuery(Constants.FULLTEXT_INDEX, idxQuery).vertices();
+            if (isValidIndexQuery) {
+                indexQryBuilder.append(" AND ");
+            }
+            isValidIndexQuery = true;
+            indexQryBuilder.append("(").append(query).append(")");
+        }
+
+        indexQryBuilder.append(")");
+
+        if (isValidIndexQuery) {
+            String indexQuery = indexQryBuilder.toString();
+
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Index query: {}", indexQuery);
+            }
+
+            final Iterator<Result<?,?>> qryResult  = graph.indexQuery(Constants.FULLTEXT_INDEX, indexQuery).vertices();
             final int                   startIdx   = params.offset();
             final int                   resultSize = params.limit();
 
@@ -224,7 +262,7 @@ public class EntityDiscoveryService implements AtlasDiscoveryService {
                     List<String> traitNames = GraphHelper.getTraitNames(vertex);
 
                     if (CollectionUtils.isEmpty(traitNames) ||
-                        !CollectionUtils.containsAny(classificationNames, traitNames)) {
+                            !CollectionUtils.containsAny(classificationNames, traitNames)) {
                         continue;
                     }
                 }
@@ -243,54 +281,18 @@ public class EntityDiscoveryService implements AtlasDiscoveryService {
                     break;
                 }
             }
-        } else {
-            final Map<String, Object> bindings   = new HashMap<>();
-            String                    basicQuery = "g.V()";
-
-            if (typeNames != null) {
-                bindings.put("typeNames", typeNames);
-
-                basicQuery += gremlinQueryProvider.getQuery(AtlasGremlinQuery.BASIC_SEARCH_TYPE_FILTER);
-            }
-
-            if (classificationNames != null) {
-                bindings.put("traitNames", classificationNames);
-
-                basicQuery += gremlinQueryProvider.getQuery(AtlasGremlinQuery.BASIC_SEARCH_CLASSIFICATION_FILTER);
-            }
-
-            bindings.put("startIdx", params.offset());
-            bindings.put("endIdx", params.offset() + params.limit());
-
-            basicQuery += gremlinQueryProvider.getQuery(AtlasGremlinQuery.TO_RANGE_LIST);
-
-            ScriptEngine scriptEngine = graph.getGremlinScriptEngine();
-
-            try {
-                Object result = graph.executeGremlinScript(scriptEngine, bindings, basicQuery, false);
-
-                if (result instanceof List && CollectionUtils.isNotEmpty((List) result)) {
-                    List   queryResult  = (List) result;
-                    Object firstElement = queryResult.get(0);
-
-                    if (firstElement instanceof AtlasVertex) {
-                        for (Object element : queryResult) {
-                            if (element instanceof AtlasVertex) {
-                                ret.addEntity(entityRetriever.toAtlasEntityHeader((AtlasVertex) element));
-                            } else {
-                                LOG.warn("searchUsingBasicQuery({}): expected an AtlasVertex; found unexpected entry in result {}", basicQuery, element);
-                            }
-                        }
-                    }
-                }
-            } catch (ScriptException e) {
-                throw new AtlasBaseException(DISCOVERY_QUERY_FAILED, basicQuery);
-            } finally {
-                graph.releaseGremlinScriptEngine(scriptEngine);
-            }
         }
 
+
         return ret;
+    }
+
+    private void buildAllSubtypeConstruct(Set<String> allSubTypes, StringBuilder indexQryBuilder) {
+        if (CollectionUtils.isNotEmpty(allSubTypes)) {
+            for (String subtype : allSubTypes) {
+                indexQryBuilder.append(" ").append(subtype);
+            }
+        }
     }
 
     private List<AtlasFullTextResult> getIndexQueryResults(AtlasIndexQuery query, QueryParams params) throws AtlasBaseException {
