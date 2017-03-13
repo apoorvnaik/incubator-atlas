@@ -472,6 +472,7 @@
         <jettison.version>1.3.7</jettison.version>
         <paranamer.version>2.7</paranamer.version>
         <zkclient.version>0.8</zkclient.version>
+        <jparsec.version>2.3</jparsec.version>
 
         <PermGen>64m</PermGen>
         <MaxPermGen>512m</MaxPermGen>
@@ -640,6 +641,11 @@
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>org.jparsec</groupId>
+                <artifactId>jparsec</artifactId>
+                <version>${jparsec.version}</version>
+            </dependency>
 
             <dependency>
                 <groupId>com.google.guava</groupId>
