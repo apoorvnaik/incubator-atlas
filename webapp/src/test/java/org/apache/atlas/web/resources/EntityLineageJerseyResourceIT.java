@@ -24,10 +24,13 @@ import com.sun.jersey.core.util.MultivaluedMapImpl;
 import org.apache.atlas.AtlasClient;
 import org.apache.atlas.model.instance.AtlasEntityHeader;
 import org.apache.atlas.model.lineage.AtlasLineageInfo;
+import org.apache.atlas.repository.graph.AtlasGraphProvider;
+import org.apache.atlas.repository.graphdb.GremlinVersion;
 import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.persistence.Id;
 import org.codehaus.jettison.json.JSONObject;
 import org.testng.Assert;
+import org.testng.SkipException;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
@@ -66,6 +69,11 @@ public class EntityLineageJerseyResourceIT extends DataSetLineageJerseyResourceI
 
     @Test
     public void testInputLineageInfo() throws Exception {
+
+        if(AtlasGraphProvider.getSupportedGremlinVersion() != GremlinVersion.TWO) {
+            throw new SkipException("This test requires Gremlin 2 to be in use.");
+        }
+
         String tableId = atlasClientV1.getEntity(HIVE_TABLE_TYPE,
                 AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, salesMonthlyTable).getId()._getId();
 
@@ -94,6 +102,11 @@ public class EntityLineageJerseyResourceIT extends DataSetLineageJerseyResourceI
 
     @Test
     public void testOutputLineageInfo() throws Exception {
+
+        if(AtlasGraphProvider.getSupportedGremlinVersion() != GremlinVersion.TWO) {
+            throw new SkipException("This test requires Gremlin 2 to be in use.");
+        }
+
         String tableId = atlasClientV1.getEntity(HIVE_TABLE_TYPE,
                 AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, salesFactTable).getId()._getId();
 
@@ -122,6 +135,11 @@ public class EntityLineageJerseyResourceIT extends DataSetLineageJerseyResourceI
 
     @Test
     public void testLineageInfo() throws Exception {
+
+        if(AtlasGraphProvider.getSupportedGremlinVersion() != GremlinVersion.TWO) {
+            throw new SkipException("This test requires Gremlin 2 to be in use.");
+        }
+
         String tableId = atlasClientV1.getEntity(HIVE_TABLE_TYPE,
                 AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME, salesMonthlyTable).getId()._getId();
 

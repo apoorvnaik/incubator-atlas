@@ -17,39 +17,6 @@
  */
 package org.apache.atlas.repository.graphdb.titan0;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import javax.script.Bindings;
-import javax.script.ScriptContext;
-import javax.script.ScriptEngine;
-import javax.script.ScriptEngineManager;
-import javax.script.ScriptException;
-
-import org.apache.atlas.AtlasErrorCode;
-import org.apache.atlas.exception.AtlasBaseException;
-import org.apache.atlas.groovy.GroovyExpression;
-import org.apache.atlas.repository.graphdb.AtlasEdge;
-import org.apache.atlas.repository.graphdb.AtlasGraph;
-import org.apache.atlas.repository.graphdb.AtlasGraphManagement;
-import org.apache.atlas.repository.graphdb.AtlasGraphQuery;
-import org.apache.atlas.repository.graphdb.AtlasIndexQuery;
-import org.apache.atlas.repository.graphdb.AtlasSchemaViolationException;
-import org.apache.atlas.repository.graphdb.AtlasVertex;
-import org.apache.atlas.repository.graphdb.GremlinVersion;
-import org.apache.atlas.repository.graphdb.titan0.query.Titan0GraphQuery;
-import org.apache.atlas.repository.graphdb.utils.IteratorToIterableAdapter;
-import org.apache.atlas.typesystem.types.IDataType;
-
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -65,8 +32,36 @@ import com.tinkerpop.blueprints.Element;
 import com.tinkerpop.blueprints.Vertex;
 import com.tinkerpop.blueprints.util.io.graphson.GraphSONWriter;
 import com.tinkerpop.pipes.util.structures.Row;
+import org.apache.atlas.AtlasErrorCode;
+import org.apache.atlas.exception.AtlasBaseException;
+import org.apache.atlas.repository.graphdb.AtlasEdge;
+import org.apache.atlas.repository.graphdb.AtlasGraph;
+import org.apache.atlas.repository.graphdb.AtlasGraphManagement;
+import org.apache.atlas.repository.graphdb.AtlasGraphQuery;
+import org.apache.atlas.repository.graphdb.AtlasIndexQuery;
+import org.apache.atlas.repository.graphdb.AtlasSchemaViolationException;
+import org.apache.atlas.repository.graphdb.AtlasVertex;
+import org.apache.atlas.repository.graphdb.titan0.query.Titan0GraphQuery;
+import org.apache.atlas.repository.graphdb.utils.IteratorToIterableAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.script.Bindings;
+import javax.script.ScriptContext;
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 
 /**
@@ -76,6 +71,8 @@ public class Titan0Graph implements AtlasGraph<Titan0Vertex, Titan0Edge> {
     private static final Logger LOG = LoggerFactory.getLogger(Titan0Graph.class);
 
     private final Set<String> multiProperties;
+    private final ScriptEngine scriptEngine;
+
 
     public Titan0Graph() {
         //determine multi-properties once at startup
@@ -89,6 +86,10 @@ public class Titan0Graph implements AtlasGraph<Titan0Vertex, Titan0Edge> {
                     multiProperties.add(key.getName());
                 }
             }
+            //Do not cache script compilations due to memory implications
+            ScriptEngineManager manager = new ScriptEngineManager();
+            scriptEngine = manager.getEngineByName("gremlin-groovy");
+            scriptEngine.getContext().setAttribute("#jsr223.groovy.engine.keep.globals", "phantom", ScriptContext.ENGINE_SCOPE);
         } finally {
             if (mgmt != null) {
                 mgmt.rollback();
@@ -234,12 +235,6 @@ public class Titan0Graph implements AtlasGraph<Titan0Vertex, Titan0Edge> {
         return rawValue;
     }
 
-    @Override
-    public GremlinVersion getSupportedGremlinVersion() {
-
-        return GremlinVersion.TWO;
-    }
-
     private List<Object> convertPathQueryResultToList(Object rawValue) {
         return (List<Object>) rawValue;
     }
@@ -267,9 +262,7 @@ public class Titan0Graph implements AtlasGraph<Titan0Vertex, Titan0Edge> {
 
     @Override
     public Object executeGremlinScript(String query, boolean isPath) throws AtlasBaseException {
-
-        Object result = executeGremlinScript(query);
-        return convertGremlinScriptResult(isPath, result);
+        return executeGremlinScript(query, null, isPath);
     }
 
     private Object convertGremlinScriptResult(boolean isPath, Object result) {
@@ -307,21 +300,26 @@ public class Titan0Graph implements AtlasGraph<Titan0Vertex, Titan0Edge> {
     }
 
     @Override
-    public Object executeGremlinScript(ScriptEngine scriptEngine, Map<? extends  String, ? extends  Object> userBindings, String query, boolean isPath) throws ScriptException {
+    public Object executeGremlinScript(String query, Map<String, Object> bindings, boolean isPath) throws AtlasBaseException {
         if (LOG.isDebugEnabled()) {
-            LOG.debug("executeGremlinScript(query={}, userBindings={})", query, userBindings);
+            LOG.debug("executeGremlinScript(query={}, userBindings={})", query, bindings);
         }
 
-        Bindings bindings = scriptEngine.createBindings();
+        Bindings engineBindings = scriptEngine.createBindings();
+        engineBindings.put("g", getGraph());
 
-        if (userBindings != null) {
-            bindings.putAll(userBindings);
+        if(bindings != null) {
+            for (Map.Entry<String, Object> entry : bindings.entrySet()) {
+                engineBindings.put(entry.getKey(), entry.getValue());
+            }
         }
 
-        bindings.put("g", getGraph());
-
-        Object result = scriptEngine.eval(query, bindings);
-
+        Object result;
+        try {
+            result = scriptEngine.eval(query, engineBindings);
+        } catch (ScriptException e) {
+            throw new AtlasBaseException(e);
+        }
         return convertGremlinScriptResult(isPath, result);
     }
 
@@ -342,34 +340,6 @@ public class Titan0Graph implements AtlasGraph<Titan0Vertex, Titan0Edge> {
         }
 
         return result;
-    }
-
-    @Override
-    public GroovyExpression generatePersisentToLogicalConversionExpression(GroovyExpression expr, IDataType<?> type) {
-
-        //nothing special needed, value is stored in required type
-        return expr;
-    }
-
-    @Override
-    public boolean isPropertyValueConversionNeeded(IDataType<?> type) {
-
-        return false;
-    }
-
-    @Override
-    public boolean requiresInitialIndexedPredicate() {
-        return false;
-    }
-
-    @Override
-    public GroovyExpression getInitialIndexedPredicate(GroovyExpression expr) {
-        return expr;
-    }
-
-    @Override
-    public GroovyExpression addOutputTransformationPredicate(GroovyExpression expr, boolean inSelect, boolean isPath) {
-        return expr;
     }
 
     public Iterable<AtlasEdge<Titan0Vertex, Titan0Edge>> wrapEdges(Iterator<Edge> it) {

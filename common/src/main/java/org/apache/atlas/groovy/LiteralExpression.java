@@ -80,16 +80,23 @@ public class LiteralExpression extends AbstractGroovyExpression {
             result.generateGroovy(context);
             return;
         }
-
-        if (value instanceof String) {
+        if(value == null) {
+            context.append("null");
+        }
+        else if (value instanceof String) {
             String escapedValue = getEscapedValue();
             context.append("'");
             context.append(escapedValue);
             context.append("'");
-
-        } else {
+        }
+        else if(value instanceof Number || value instanceof Boolean) {
             context.append(String.valueOf(value));
             context.append(getTypeSuffix());
+        }
+        else {
+            context.append("'");
+            context.append(String.valueOf(value));
+            context.append("'");
         }
 
     }

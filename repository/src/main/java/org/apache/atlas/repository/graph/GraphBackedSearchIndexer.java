@@ -42,6 +42,7 @@ import org.apache.atlas.repository.graphdb.AtlasGraph;
 import org.apache.atlas.repository.graphdb.AtlasGraphIndex;
 import org.apache.atlas.repository.graphdb.AtlasGraphManagement;
 import org.apache.atlas.repository.graphdb.AtlasPropertyKey;
+import org.apache.atlas.repository.graphdb.GremlinVersion;
 import org.apache.atlas.type.AtlasClassificationType;
 import org.apache.atlas.type.AtlasEntityType;
 import org.apache.atlas.type.AtlasEnumType;
@@ -150,10 +151,10 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
                     AtlasCardinality.SINGLE, false, false);
 
 
-            // create a mixed index for entity state. Set systemProperty flag deliberately to false
-            // so that it doesnt create a composite index which has issues with
-            // titan 0.5.4 - Refer https://groups.google.com/forum/#!searchin/aureliusgraphs/hemanth/aureliusgraphs/bx7T843mzXU/fjAsclx7GAAJ
-            createIndexes(management, Constants.STATE_PROPERTY_KEY, String.class, false, AtlasCardinality.SINGLE, false, false);
+            // Create a composite and mixed index for entity state. Avoid creating a composite index when using Titan 0.5.4
+            // to avoid the issue described in https://groups.google.com/forum/#!searchin/aureliusgraphs/hemanth/aureliusgraphs/bx7T843mzXU/fjAsclx7GAAJ
+            boolean addCompositeIndexForState = AtlasGraphProvider.getSupportedGremlinVersion() == GremlinVersion.TWO ? false  :true;
+            createIndexes(management, Constants.STATE_PROPERTY_KEY, String.class, false, AtlasCardinality.SINGLE, addCompositeIndexForState, false);
 
             // Create a composite and mixed index for created by property
             createIndexes(management, Constants.CREATED_BY_KEY, String.class, false,
@@ -633,7 +634,7 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
 
             //Commit indexes
             commit(management);
-        } catch (RepositoryException | IndexException e) {
+        } catch (IndexException e) {
             LOG.error("Failed to update indexes for changed typedefs", e);
             attemptRollback(changedTypeDefs, management);
         }

@@ -37,5 +37,6 @@
         <module>graphdb-impls</module>
         <module>titan0</module>
         <module>titan1</module>
+        <module>ibm-graph</module>
     </modules>
 </project>

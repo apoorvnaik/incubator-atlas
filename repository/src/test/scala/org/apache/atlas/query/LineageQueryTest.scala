@@ -46,16 +46,17 @@ class LineageQueryTest extends BaseGremlinTest {
     @BeforeClass
     def beforeAll() {
         TypeSystem.getInstance().reset()
+        AtlasGraphProvider.initializeTestGraph();
         var repo = new GraphBackedMetadataRepository(null);
         TestUtils.setupGraphProvider(repo);
         //force graph to be initialized first
         AtlasGraphProvider.getGraphInstance();
-      
+
         //create types and indices up front.  Without this, some of the property keys (particularly __traitNames and __superTypes)
-        //get ended up created implicitly with some graph backends with the wrong multiplicity.  This also makes the queries  
+        //get ended up created implicitly with some graph backends with the wrong multiplicity.  This also makes the queries
         //we execute perform better :-)
        QueryTestsUtils.setupTypesAndIndices()
-    
+
        gp = new DefaultGraphPersistenceStrategy(repo);
        g = QueryTestsUtils.setupTestGraph(repo)
     }

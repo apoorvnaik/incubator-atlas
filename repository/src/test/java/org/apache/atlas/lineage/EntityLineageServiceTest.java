@@ -18,22 +18,11 @@
 
 package org.apache.atlas.lineage;
 
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertTrue;
-import static org.testng.Assert.fail;
-
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import javax.inject.Inject;
-
+import com.google.common.collect.ImmutableList;
 import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.BaseRepositoryTest;
-import org.apache.atlas.RepositoryMetadataModule;
+import org.apache.atlas.TestMetadataModule;
 import org.apache.atlas.TestUtils;
 import org.apache.atlas.discovery.EntityLineageService;
 import org.apache.atlas.exception.AtlasBaseException;
@@ -42,24 +31,36 @@ import org.apache.atlas.model.instance.AtlasEntityHeader;
 import org.apache.atlas.model.lineage.AtlasLineageInfo;
 import org.apache.atlas.model.lineage.AtlasLineageInfo.LineageDirection;
 import org.apache.atlas.model.lineage.AtlasLineageInfo.LineageRelation;
+import org.apache.atlas.repository.graph.AtlasGraphProvider;
+import org.apache.atlas.repository.graphdb.GremlinVersion;
 import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.persistence.Id;
 import org.apache.commons.collections.ArrayStack;
 import org.apache.commons.lang.RandomStringUtils;
 import org.testng.Assert;
+import org.testng.SkipException;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
-import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
-import com.google.common.collect.ImmutableList;
+import javax.inject.Inject;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
 
 /**
  * Unit tests for the new v2 Instance LineageService.
  */
-@Guice(modules = RepositoryMetadataModule.class)
+@Guice(modules = TestMetadataModule.class)
+@Test
 public class EntityLineageServiceTest extends BaseRepositoryTest {
 
     @Inject
@@ -67,12 +68,17 @@ public class EntityLineageServiceTest extends BaseRepositoryTest {
 
     @BeforeClass
     public void setUp() throws Exception {
+        if(AtlasGraphProvider.getSupportedGremlinVersion() != GremlinVersion.TWO) {
+            //See https://issues.apache.org/jira/browse/ATLAS-1579
+            throw new SkipException("The EntityLineageService only works with Gremlin 2.");
+        }
         super.setUp();
     }
 
     @AfterClass
     public void tearDown() throws Exception {
         super.tearDown();
+        AtlasGraphProvider.cleanup();
     }
 
     /**

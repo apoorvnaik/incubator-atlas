@@ -21,6 +21,8 @@ package org.apache.atlas.web.resources;
 import com.google.common.collect.ImmutableList;
 import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasServiceException;
+import org.apache.atlas.repository.graph.AtlasGraphProvider;
+import org.apache.atlas.repository.graphdb.GremlinVersion;
 import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.Struct;
 import org.apache.atlas.typesystem.json.InstanceSerialization;
@@ -28,6 +30,7 @@ import org.apache.atlas.typesystem.persistence.Id;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONObject;
 import org.testng.Assert;
+import org.testng.SkipException;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 import org.apache.atlas.typesystem.types.HierarchicalTypeDefinition;
@@ -51,6 +54,7 @@ public class DataSetLineageJerseyResourceIT extends BaseResourceIT {
 
     @BeforeClass
     public void setUp() throws Exception {
+
         super.setUp();
 
         createTypeDefinitionsV1();
@@ -78,6 +82,12 @@ public class DataSetLineageJerseyResourceIT extends BaseResourceIT {
 
     @Test
     public void testInputsGraphForEntity() throws Exception {
+
+        if(AtlasGraphProvider.getSupportedGremlinVersion() != GremlinVersion.TWO) {
+            //See https://issues.apache.org/jira/browse/ATLAS-1579
+            throw new SkipException("This test requires Gremlin 2 to be in use.");
+        }
+
         String tableId = atlasClientV1.getEntity(HIVE_TABLE_TYPE, AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME,
                 salesMonthlyTable).getId()._getId();
         JSONObject results = atlasClientV1.getInputGraphForEntity(tableId);
@@ -114,6 +124,12 @@ public class DataSetLineageJerseyResourceIT extends BaseResourceIT {
 
     @Test
     public void testOutputsGraphForEntity() throws Exception {
+
+        if(AtlasGraphProvider.getSupportedGremlinVersion() != GremlinVersion.TWO) {
+            //See https://issues.apache.org/jira/browse/ATLAS-1579
+            throw new SkipException("This test requires Gremlin 2 to be in use.");
+        }
+
         String tableId = atlasClientV1.getEntity(HIVE_TABLE_TYPE, AtlasClient.REFERENCEABLE_ATTRIBUTE_NAME,
                 salesFactTable).getId()._getId();
         JSONObject results = atlasClientV1.getOutputGraphForEntity(tableId);

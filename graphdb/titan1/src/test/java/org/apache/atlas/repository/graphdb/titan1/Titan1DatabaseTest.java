@@ -58,7 +58,7 @@ public class Titan1DatabaseTest {
     private <V, E> AtlasGraph<V, E> getGraph() {
         if (atlasGraph == null) {
             Titan1GraphDatabase db = new Titan1GraphDatabase();
-            atlasGraph = db.getGraph();
+            atlasGraph = db.getUserGraph();
             AtlasGraphManagement mgmt = atlasGraph.getManagementSystem();
             // create the index (which defines these properties as being mult
             // many)

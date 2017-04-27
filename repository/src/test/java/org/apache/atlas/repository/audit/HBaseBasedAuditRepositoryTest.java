@@ -21,6 +21,7 @@ package org.apache.atlas.repository.audit;
 import org.apache.atlas.ApplicationProperties;
 import org.apache.atlas.EntityAuditEvent;
 import org.apache.atlas.TestUtils;
+import org.apache.atlas.repository.graph.AtlasGraphProvider;
 import org.apache.commons.configuration.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -37,14 +38,17 @@ public class HBaseBasedAuditRepositoryTest extends AuditRepositoryTestBase {
 
     @BeforeClass
     public void setup() throws Exception {
-        //ATLAS-1591 Currently, some tests are skipped for titan1 backened. As these tests are hard coded to use Gremlin2. See ATLAS-1591 once it is fixed, please remove it.
-
+        //ATLAS-1591 Currently, some tests are skipped for titan1 backend. As these tests are hard coded to use Gremlin2.
+        //See ATLAS-1591 once it is fixed, please remove this check.
         TestUtils.skipForGremlin3EnabledGraphDb();
+
+        Configuration properties = ApplicationProperties.get();
+        AtlasGraphProvider.initializeTestGraph();
         eventRepository = new HBaseBasedAuditRepository();
         HBaseTestUtils.startCluster();
         ((HBaseBasedAuditRepository) eventRepository).start();
 
-        Configuration properties = ApplicationProperties.get();
+
         String tableNameStr = properties.getString(HBaseBasedAuditRepository.CONFIG_TABLE_NAME,
                 HBaseBasedAuditRepository.DEFAULT_TABLE_NAME);
         tableName = TableName.valueOf(tableNameStr);

@@ -25,7 +25,7 @@ import org.apache.atlas.repository.graphdb.GremlinVersion;
  */
 public abstract class AtlasGremlinQueryProvider {
     public static final AtlasGremlinQueryProvider INSTANCE =
-            AtlasGraphProvider.getGraphInstance().getSupportedGremlinVersion() == GremlinVersion.THREE ?
+            AtlasGraphProvider.getSupportedGremlinVersion() == GremlinVersion.THREE ?
                     new AtlasGremlin3QueryProvider() : new AtlasGremlin2QueryProvider();
 
     abstract public String getQuery(final AtlasGremlinQuery gremlinQuery);

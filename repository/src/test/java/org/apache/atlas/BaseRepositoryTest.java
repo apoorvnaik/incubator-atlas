@@ -56,7 +56,7 @@ import javax.inject.Inject;
 /**
  *  Base Class to set up hive types and instances for tests
  */
-@Guice(modules = RepositoryMetadataModule.class)
+@Guice(modules = TestMetadataModule.class)
 public class BaseRepositoryTest {
 
     @Inject

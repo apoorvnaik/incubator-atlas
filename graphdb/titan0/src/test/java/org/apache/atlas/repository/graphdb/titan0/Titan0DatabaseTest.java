@@ -18,21 +18,6 @@
 
 package org.apache.atlas.repository.graphdb.titan0;
 
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertNull;
-import static org.testng.Assert.assertTrue;
-import static org.testng.Assert.fail;
-
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.repository.Constants;
 import org.apache.atlas.repository.graphdb.AtlasCardinality;
@@ -48,6 +33,16 @@ import org.apache.atlas.typesystem.types.DataTypes.TypeCategory;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+
+import static org.testng.Assert.*;
+
 /**
  * Sanity test of basic graph operations using the Titan 0.5.4 graphdb
  * abstraction layer implementation.
@@ -59,7 +54,7 @@ public class Titan0DatabaseTest {
     private <V, E> AtlasGraph<V, E> getGraph() {
         if (atlasGraph == null) {
             Titan0GraphDatabase db = new Titan0GraphDatabase();
-            atlasGraph = db.getGraph();
+            atlasGraph = db.getSharedGraph();
             AtlasGraphManagement mgmt = atlasGraph.getManagementSystem();
             // create the index (which defines these properties as being mult
             // many)

@@ -18,36 +18,14 @@
 
 package org.apache.atlas.service;
 
-import static org.apache.atlas.TestUtils.COLUMNS_ATTR_NAME;
-import static org.apache.atlas.TestUtils.COLUMN_TYPE;
-import static org.apache.atlas.TestUtils.PII;
-import static org.apache.atlas.TestUtils.TABLE_TYPE;
-import static org.apache.atlas.TestUtils.createColumnEntity;
-import static org.apache.atlas.TestUtils.createDBEntity;
-import static org.apache.atlas.TestUtils.createInstance;
-import static org.apache.atlas.TestUtils.createTableEntity;
-import static org.apache.atlas.TestUtils.randomString;
-import static org.apache.atlas.typesystem.types.utils.TypesUtil.createClassTypeDef;
-import static org.apache.atlas.typesystem.types.utils.TypesUtil.createOptionalAttrDef;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertNull;
-import static org.testng.Assert.assertTrue;
-import static org.testng.Assert.fail;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.inject.Inject;
 import org.apache.atlas.AtlasClient;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.EntityAuditEvent;
-import org.apache.atlas.RepositoryMetadataModule;
 import org.apache.atlas.RequestContext;
+import org.apache.atlas.TestMetadataModule;
 import org.apache.atlas.TestUtils;
 import org.apache.atlas.discovery.graph.GraphBackedDiscoveryService;
 import org.apache.atlas.exception.AtlasBaseException;
@@ -94,11 +72,20 @@ import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.inject.Inject;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-@Guice(modules = RepositoryMetadataModule.class)
+import static org.apache.atlas.TestUtils.*;
+import static org.apache.atlas.typesystem.types.utils.TypesUtil.createClassTypeDef;
+import static org.apache.atlas.typesystem.types.utils.TypesUtil.createOptionalAttrDef;
+import static org.testng.Assert.*;
+
+@Guice(modules = TestMetadataModule.class)
 public class DefaultMetadataServiceTest {
     @Inject
     private MetadataService metadataService;
@@ -1237,6 +1224,40 @@ public class DefaultMetadataServiceTest {
         } catch (AtlasException e) {
             fail("getTypeNames should've succeeded", e);
         }
+    }
+
+    @Test
+    public void testPropertyTypesEnforced() throws Exception {
+
+
+        String typeName = "test_type_"+ RandomStringUtils.randomAlphanumeric(10);
+        String propertyKey = typeName + ".floatAttr";
+        String expectedType = "Float";
+
+        HierarchicalTypeDefinition<ClassType> typeDef = TypesUtil.createClassTypeDef(
+                typeName, ImmutableSet.<String>of(),
+                new AttributeDefinition("floatAttr",DataTypes.FLOAT_TYPE.getName(), Multiplicity.OPTIONAL, false, false, false, null));
+        TypesDef typesDef = new TypesDef(typeDef, false);
+        JSONObject type = metadataService.createType(TypesSerialization.toJson(typesDef));
+
+        //make sure that the integer gets converted to a float when saved
+        //and does not implicity create a property key for the vertex
+        //with Integer as the type (which would prevent non-integer
+        //values from being able to be stored).  We've seen cases
+        //in the past where this happened.
+        Referenceable entity = new Referenceable(typeName);
+        entity.set("floatAttr",0);
+        TestUtils.createInstance(metadataService, entity);
+
+        AtlasGraphProvider.getGraphInstance().commit();
+
+        entity = new Referenceable(typeName);
+        entity.set("floatAttr", Float.MAX_VALUE);
+
+        TestUtils.createInstance(metadataService, entity);
+
+        AtlasGraphProvider.getGraphInstance().commit();
+
     }
 
     private static class EntitiesChangeListener implements EntityChangeListener {

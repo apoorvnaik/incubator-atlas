@@ -19,13 +19,13 @@ package org.apache.atlas.discovery;
 
 import org.apache.atlas.AtlasConfiguration;
 import org.apache.atlas.AtlasErrorCode;
-import org.apache.atlas.model.discovery.AtlasSearchResult.AtlasFullTextResult;
-import org.apache.atlas.model.discovery.AtlasSearchResult.AtlasQueryType;
-import org.apache.atlas.model.discovery.AtlasSearchResult.AttributeSearchResult;
 import org.apache.atlas.discovery.graph.DefaultGraphPersistenceStrategy;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.discovery.AtlasSearchResult;
 import org.apache.atlas.model.instance.AtlasEntity.Status;
+import org.apache.atlas.model.discovery.AtlasSearchResult.AtlasFullTextResult;
+import org.apache.atlas.model.discovery.AtlasSearchResult.AtlasQueryType;
+import org.apache.atlas.model.discovery.AtlasSearchResult.AttributeSearchResult;
 import org.apache.atlas.model.instance.AtlasEntityHeader;
 import org.apache.atlas.query.Expressions.AliasExpression;
 import org.apache.atlas.query.Expressions.Expression;
@@ -62,7 +62,6 @@ import scala.util.parsing.combinator.Parsers.NoSuccess;
 
 import javax.inject.Inject;
 import javax.script.ScriptEngine;
-import javax.script.ScriptException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -71,9 +70,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.apache.atlas.AtlasErrorCode.CLASSIFICATION_NOT_FOUND;
 import static org.apache.atlas.AtlasErrorCode.DISCOVERY_QUERY_FAILED;
 import static org.apache.atlas.AtlasErrorCode.UNKNOWN_TYPENAME;
-import static org.apache.atlas.AtlasErrorCode.CLASSIFICATION_NOT_FOUND;
 
 public class EntityDiscoveryService implements AtlasDiscoveryService {
     private static final Logger LOG = LoggerFactory.getLogger(EntityDiscoveryService.class);
@@ -217,7 +216,7 @@ public class EntityDiscoveryService implements AtlasDiscoveryService {
                     if (attribute == null) {
                         throw new AtlasBaseException(AtlasErrorCode.UNKNOWN_ATTRIBUTE, attrName, typeName);
                     }
-                    
+
                 } else {
                     // if attrName is null|empty iterate defaultAttrNames to get attribute value
                     final List<String> defaultAttrNames = new ArrayList<>(Arrays.asList("qualifiedName", "name"));
@@ -338,7 +337,7 @@ public class EntityDiscoveryService implements AtlasDiscoveryService {
             ScriptEngine scriptEngine = graph.getGremlinScriptEngine();
 
             try {
-                Object result = graph.executeGremlinScript(scriptEngine, bindings, basicQuery, false);
+                Object result = graph.executeGremlinScript(basicQuery, bindings, false);
 
                 if (result instanceof List && CollectionUtils.isNotEmpty((List) result)) {
                     List   queryResult  = (List) result;
@@ -358,8 +357,6 @@ public class EntityDiscoveryService implements AtlasDiscoveryService {
                         }
                     }
                 }
-            } catch (ScriptException e) {
-                throw new AtlasBaseException(DISCOVERY_QUERY_FAILED, basicQuery);
             } finally {
                 graph.releaseGremlinScriptEngine(scriptEngine);
             }

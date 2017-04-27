@@ -149,21 +149,18 @@ public class Gremlin3ExpressionFactory extends GremlinExpressionFactory {
         AttributeInfo attrInfo = fInfo.attrInfo();
         IDataType attrType = attrInfo.dataType();
         GroovyExpression propertyNameExpr = new LiteralExpression(propertyName);
-        //Whether it is the user or shared graph does not matter here, since we're
-        //just getting the conversion expression.  Ideally that would be moved someplace else.
-        AtlasGraph graph = AtlasGraphProvider.getGraphInstance();
         if (inSelect) {
 
             GroovyExpression expr = new FunctionCallExpression(parent, PROPERTY_METHOD, propertyNameExpr);
             expr = new FunctionCallExpression(expr, OR_ELSE_METHOD, LiteralExpression.NULL);
-            return graph.generatePersisentToLogicalConversionExpression(expr, attrType);
+            return AtlasGraphProvider.generatePersisentToLogicalConversionExpression(expr, attrType);
         } else {
 
             GroovyExpression unmapped = new FunctionCallExpression(TraversalStepType.FLAT_MAP_TO_VALUES, parent, VALUES_METHOD, propertyNameExpr);
-            if (graph.isPropertyValueConversionNeeded(attrType)) {
+            if (AtlasGraphProvider.isPropertyValueConversionNeeded(attrType)) {
                 GroovyExpression toConvert = new FunctionCallExpression(getItVariable(), GET_METHOD);
 
-                GroovyExpression conversionFunction = graph.generatePersisentToLogicalConversionExpression(toConvert,
+                GroovyExpression conversionFunction = AtlasGraphProvider.generatePersisentToLogicalConversionExpression(toConvert,
                         attrType);
                 return new FunctionCallExpression(TraversalStepType.MAP_TO_VALUE, unmapped, MAP_METHOD, new ClosureExpression(conversionFunction));
             } else {

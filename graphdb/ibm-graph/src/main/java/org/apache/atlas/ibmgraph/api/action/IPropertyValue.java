@@ -15,21 +15,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.atlas.repository.graph;
+package org.apache.atlas.ibmgraph.api.action;
 
-import org.apache.atlas.query.IntSequence;
+import org.apache.atlas.ibmgraph.api.json.update.ElementChanges;
 
 /**
- * IntSequence for use in unit tests.
- *
+ * Represents the value of an Element property.
  */
-public class TestIntSequence implements IntSequence {
+public interface IPropertyValue {
 
-    public static final IntSequence INSTANCE = new TestIntSequence();
-    private TestIntSequence() {
-    }
-    @Override
-    public int next() {
-        return 0;
-    }
+    /**
+     * Whether or not this value should be added to the property value index
+     */
+    public boolean isIndexed();
+
+    /**
+     * Gets the value of the property, attempting to convert it to an instance of
+     * the given class.
+     */
+    public <T> T getValue(Class<T> clazz);
+
+    /**
+     * Gets the type of the property value.
+     */
+    Class getOriginalType();
+
+    /**
+     * Updates changes to set the property with the given name to this value.
+     *
+     * @param propertyName
+     * @param changes
+     */
+    void addToElementChanges(String propertyName, ElementChanges changes);
+
 }

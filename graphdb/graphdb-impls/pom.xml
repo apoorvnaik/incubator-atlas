@@ -26,12 +26,9 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>atlas-graphdb-impls</artifactId>
-    <!-- Convenience dependency project that allows
-    the dependency on the correct implementation class
-    to be configured through profiles.  In implementation
-    specific profiles, the dependency on this project
-    should be configured to exclude all but the
-    proper dependency
+    <!-- Convenience dependency project that allows the dependency on the correct implementation class
+    to be configured through profiles.  In this project, there should be no exclusions.  The backends
+    not being used are excluded through backend-specific profiles in the root pom.xml.
     -->
 
     <description>Apache Atlas Graph Database Implementation Dependencies</description>
@@ -46,6 +43,11 @@
         <dependency>
             <groupId>org.apache.atlas</groupId>
             <artifactId>atlas-graphdb-titan0</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.atlas</groupId>
+            <artifactId>atlas-graphdb-ibm-graph</artifactId>
             <version>${project.version}</version>
         </dependency>
     </dependencies>

@@ -21,7 +21,7 @@ package org.apache.atlas.repository.typestore;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.atlas.AtlasException;
-import org.apache.atlas.RepositoryMetadataModule;
+import org.apache.atlas.TestMetadataModule;
 import org.apache.atlas.TestUtils;
 import org.apache.atlas.repository.RepositoryException;
 import org.apache.atlas.repository.graph.AtlasGraphProvider;
@@ -50,9 +50,9 @@ import static org.apache.atlas.typesystem.types.utils.TypesUtil.createOptionalAt
 import static org.apache.atlas.typesystem.types.utils.TypesUtil.createRequiredAttrDef;
 import static org.apache.atlas.typesystem.types.utils.TypesUtil.createStructTypeDef;
 
-@Guice(modules = RepositoryMetadataModule.class)
+@Guice(modules = TestMetadataModule.class)
 public class GraphBackedTypeStoreTest {
-    
+
     private static final String DESCRIPTION = "_description";
 
     @Inject
@@ -191,7 +191,7 @@ public class GraphBackedTypeStoreTest {
         typeStore.store(ts, ImmutableList.copyOf(typesAdded.keySet()));
 
         verifyEdges();
-        
+
         //Validate the updated types
         TypesDef types = typeStore.restore();
         ts.reset();

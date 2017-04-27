@@ -29,6 +29,7 @@
         <fileSet>
             <directory>target/conf/</directory>
             <outputDirectory>conf</outputDirectory>
+            <lineEnding>unix</lineEnding>
         </fileSet>
 
         <fileSet>

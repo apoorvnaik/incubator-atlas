@@ -18,33 +18,9 @@
 
 package org.apache.atlas;
 
-import static org.apache.atlas.typesystem.types.utils.TypesUtil.createClassTypeDef;
-import static org.apache.atlas.typesystem.types.utils.TypesUtil.createOptionalAttrDef;
-import static org.apache.atlas.typesystem.types.utils.TypesUtil.createRequiredAttrDef;
-import static org.apache.atlas.typesystem.types.utils.TypesUtil.createStructTypeDef;
-import static org.apache.atlas.typesystem.types.utils.TypesUtil.createTraitTypeDef;
-import static org.apache.atlas.typesystem.types.utils.TypesUtil.createUniqueRequiredAttrDef;
-import static org.testng.Assert.assertEquals;
-
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.inject.Provider;
 import org.apache.atlas.listener.EntityChangeListener;
 import org.apache.atlas.listener.TypesChangeListener;
 import org.apache.atlas.repository.MetadataRepository;
@@ -65,19 +41,8 @@ import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.TypesDef;
 import org.apache.atlas.typesystem.json.InstanceSerialization;
 import org.apache.atlas.typesystem.persistence.Id;
-import org.apache.atlas.typesystem.types.AttributeDefinition;
-import org.apache.atlas.typesystem.types.AttributeInfo;
-import org.apache.atlas.typesystem.types.ClassType;
-import org.apache.atlas.typesystem.types.DataTypes;
+import org.apache.atlas.typesystem.types.*;
 import org.apache.atlas.typesystem.types.DataTypes.TypeCategory;
-import org.apache.atlas.typesystem.types.EnumTypeDefinition;
-import org.apache.atlas.typesystem.types.EnumValue;
-import org.apache.atlas.typesystem.types.HierarchicalTypeDefinition;
-import org.apache.atlas.typesystem.types.IDataType;
-import org.apache.atlas.typesystem.types.Multiplicity;
-import org.apache.atlas.typesystem.types.StructTypeDefinition;
-import org.apache.atlas.typesystem.types.TraitType;
-import org.apache.atlas.typesystem.types.TypeSystem;
 import org.apache.atlas.typesystem.types.cache.DefaultTypeCache;
 import org.apache.atlas.typesystem.types.cache.TypeCache;
 import org.apache.atlas.typesystem.types.utils.TypesUtil;
@@ -85,17 +50,39 @@ import org.apache.atlas.util.AtlasRepositoryConfiguration;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.lang.RandomStringUtils;
 import org.codehaus.jettison.json.JSONArray;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.testng.Assert;
 import org.testng.SkipException;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-import com.google.inject.Provider;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import static org.apache.atlas.typesystem.types.utils.TypesUtil.*;
+import static org.testng.Assert.assertEquals;
 
 /**
  * Test utility class.
  */
 public final class TestUtils {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(TestUtils.class);
 
     public static final long TEST_DATE_IN_LONG = 1418265358440L;
 
@@ -137,7 +124,7 @@ public final class TestUtils {
      */
     public static String dumpGraph(AtlasGraph<?,?> graph) throws Exception {
         File tempFile = File.createTempFile("graph", ".gson");
-        System.out.println("tempFile.getPath() = " + tempFile.getPath());
+        LOGGER.info("tempFile.getPath() = " + tempFile.getPath());
         GraphHelper.dumpToLog(graph);
         FileOutputStream os = null;
         try {
@@ -194,12 +181,12 @@ public final class TestUtils {
                 new AttributeDefinition(ASSETS_ATTR, String.format("array<%s>", ASSET_TYPE) , Multiplicity.OPTIONAL, false, null),
                 createOptionalAttrDef("birthday", DataTypes.DATE_TYPE),
                 createOptionalAttrDef("hasPets", DataTypes.BOOLEAN_TYPE),
-                createOptionalAttrDef("numberOfCars", DataTypes.BYTE_TYPE),
-                createOptionalAttrDef("houseNumber", DataTypes.SHORT_TYPE),
-                createOptionalAttrDef("carMileage", DataTypes.INT_TYPE),
+                createOptionalIndexedAttrDef("numberOfCars", DataTypes.BYTE_TYPE), 
+                createOptionalIndexedAttrDef("houseNumber", DataTypes.SHORT_TYPE),
+                createOptionalIndexedAttrDef("carMileage", DataTypes.INT_TYPE),
                 createOptionalAttrDef("shares", DataTypes.LONG_TYPE),
                 createOptionalAttrDef("salary", DataTypes.DOUBLE_TYPE),
-                createOptionalAttrDef("age", DataTypes.FLOAT_TYPE),
+                createOptionalIndexedAttrDef("age", DataTypes.FLOAT_TYPE),
                 createOptionalAttrDef("numberOfStarsEstimate", DataTypes.BIGINTEGER_TYPE),
                 createOptionalAttrDef("approximationOfPi", DataTypes.BIGDECIMAL_TYPE),
                 createOptionalAttrDef("isOrganDonor", DataTypes.BOOLEAN_TYPE)
@@ -223,10 +210,19 @@ public final class TestUtils {
                 ImmutableList.of(securityClearanceTypeDef),
                 ImmutableList.of(deptTypeDef, personTypeDef, managerTypeDef, assetTypeDef));
     }
-
+    
+    //When certain attributes are not indexed, it takes longer for the result to show up
+    //in Gremlin query results, probably because we end up using a stale index that has
+    //not been updated yet.
+    private static AttributeDefinition createOptionalIndexedAttrDef(String name, IDataType dataType) {
+        return new AttributeDefinition(name, dataType.getName(), Multiplicity.OPTIONAL, false, false, true, null);
+    }
+    
     public static final String DEPARTMENT_TYPE = "Department";
     public static final String PERSON_TYPE = "Person";
 
+    
+    
     public static ITypedReferenceableInstance createDeptEg1(TypeSystem ts) throws AtlasException {
         Referenceable hrDept = new Referenceable(DEPARTMENT_TYPE);
         Referenceable john = new Referenceable(PERSON_TYPE);
@@ -661,7 +657,6 @@ public final class TestUtils {
                 try {
                     resetRequestContext();
                     Object result = method.invoke(delegate, args);
-
                     return result;
                 }
                 catch(InvocationTargetException e) {
@@ -698,16 +693,16 @@ public final class TestUtils {
                     resetRequestContext();
                     Object result = method.invoke(delegate, args);
                     if(useTransaction) {
-                        System.out.println("Committing changes");
+                        LOGGER.info("Committing changes");
                         getGraph().commit();
-                        System.out.println("Commit succeeded.");
+                        LOGGER.info("Commit succeeded.");
                     }
                     return result;
                 }
                 catch(InvocationTargetException e) {
                     e.getCause().printStackTrace();
                     if(useTransaction) {
-                        System.out.println("Rolling back changes due to exception.");
+                        LOGGER.info("Rolling back changes due to exception.");
                         getGraph().rollback();
                     }
                     throw e.getCause();
@@ -715,7 +710,7 @@ public final class TestUtils {
                 catch(Throwable t) {
                     t.printStackTrace();
                     if(useTransaction) {
-                        System.out.println("Rolling back changes due to exception.");
+                        LOGGER.info("Rolling back changes due to exception.");
                         getGraph().rollback();
                     }
                     throw t;
@@ -783,8 +778,14 @@ public final class TestUtils {
 
     public static void skipForGremlin3EnabledGraphDb() throws SkipException {
         //ATLAS-1579 Currently, some tests are skipped for titan1 backened. As these tests are hard coded to use Gremlin2. See ATLAS-1579, ATLAS-1591 once it is fixed, please remove it.
-         if (TestUtils.getGraph().getSupportedGremlinVersion() == GremlinVersion.THREE) {
+         if (AtlasGraphProvider.getSupportedGremlinVersion() == GremlinVersion.THREE) {
              throw new SkipException ("This test requires Gremlin2. Skipping test ");
+         }
+    }
+    
+    public static void skipIfGraphScanRequired() throws SkipException {
+         if (!AtlasGraphProvider.isGraphScanAllowed()) {
+             throw new SkipException ("This test requires requires a graph scan, which is not supported by the current graph backend.");
          }
     }
 

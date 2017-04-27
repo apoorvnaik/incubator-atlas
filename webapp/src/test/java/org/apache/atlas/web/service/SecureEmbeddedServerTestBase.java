@@ -40,16 +40,19 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
 import javax.ws.rs.core.UriBuilder;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
+import java.security.KeyStore;
 
-import static org.apache.atlas.security.SecurityProperties.CERT_STORES_CREDENTIAL_PROVIDER_PATH;
-import static org.apache.atlas.security.SecurityProperties.DEFAULT_KEYSTORE_FILE_LOCATION;
-import static org.apache.atlas.security.SecurityProperties.KEYSTORE_PASSWORD_KEY;
-import static org.apache.atlas.security.SecurityProperties.SERVER_CERT_PASSWORD_KEY;
-import static org.apache.atlas.security.SecurityProperties.TRUSTSTORE_PASSWORD_KEY;
+import static org.apache.atlas.security.SecurityProperties.*;
 
 /**
  * Secure Test class for jersey resources.
@@ -64,19 +67,6 @@ public class SecureEmbeddedServerTestBase {
     protected WebResource service;
     private int securePort;
 
-    static {
-        //for localhost testing only
-        javax.net.ssl.HttpsURLConnection.setDefaultHostnameVerifier(new javax.net.ssl.HostnameVerifier() {
-
-                    public boolean verify(String hostname, javax.net.ssl.SSLSession sslSession) {
-                        return hostname.equals("localhost");
-                    }
-                });
-        System.setProperty("javax.net.ssl.trustStore", DEFAULT_KEYSTORE_FILE_LOCATION);
-        System.setProperty("javax.net.ssl.trustStorePassword", "keypass");
-        System.setProperty("javax.net.ssl.trustStoreType", "JKS");
-        System.setProperty("https.protocols", "TLSv1.2");
-    }
 
     @BeforeClass
     public void setupSecurePort() throws AtlasException {
@@ -208,5 +198,38 @@ public class SecureEmbeddedServerTestBase {
             e.printStackTrace();
             throw e;
         }
+    }
+
+    protected HostnameVerifier createLocalhostOnlyHostnameVerifier() {
+        return new HostnameVerifier() {
+
+            public boolean verify(String hostname, SSLSession sslSession) {
+                return hostname.equals("localhost");
+            }
+
+        };
+    }
+
+    protected TrustManager[] createClientTrustManagers() throws Exception {
+        KeyStore trustStore = loadAtlasKeyStore();
+        String algorithm = TrustManagerFactory.getDefaultAlgorithm();
+        TrustManagerFactory factory = TrustManagerFactory.getInstance(algorithm);
+        factory.init(trustStore);
+        return factory.getTrustManagers();
+    }
+
+    protected KeyStore loadAtlasKeyStore() throws Exception {
+        KeyStore store = KeyStore.getInstance("JKS");
+        File keystoreFile = new File(TestUtils.getWebAppDirectory() + "/" + DEFAULT_KEYSTORE_FILE_LOCATION);
+        if(! keystoreFile.exists()) {
+            throw new AtlasException("KeyStore " + keystoreFile.getAbsolutePath() + " does not exist!");
+        }
+        InputStream is = new FileInputStream(keystoreFile);
+        try {
+            store.load(is, new char[] {'k', 'e', 'y', 'p', 'a', 's', 's'});
+        } finally {
+            is.close();
+        }
+        return store;
     }
 }

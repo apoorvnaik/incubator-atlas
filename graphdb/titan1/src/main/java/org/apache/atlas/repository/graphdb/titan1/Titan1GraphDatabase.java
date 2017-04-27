@@ -18,30 +18,33 @@
 
 package org.apache.atlas.repository.graphdb.titan1;
 
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.util.ArrayList;
-
-import org.apache.atlas.ApplicationProperties;
-import org.apache.atlas.AtlasException;
-import org.apache.atlas.repository.graphdb.AtlasGraph;
-import org.apache.atlas.repository.graphdb.GraphDatabase;
-import org.apache.atlas.repository.graphdb.titan1.serializer.BigDecimalSerializer;
-import org.apache.atlas.repository.graphdb.titan1.serializer.BigIntegerSerializer;
-import org.apache.atlas.repository.graphdb.titan1.serializer.StringListSerializer;
-import org.apache.atlas.repository.graphdb.titan1.serializer.TypeCategorySerializer;
-import org.apache.atlas.typesystem.types.DataTypes.TypeCategory;
-import org.apache.commons.configuration.Configuration;
-import org.apache.tinkerpop.gremlin.groovy.loaders.SugarLoader;
-import org.apache.tinkerpop.gremlin.structure.io.graphson.GraphSONMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.thinkaurelius.titan.core.TitanFactory;
 import com.thinkaurelius.titan.core.TitanGraph;
 import com.thinkaurelius.titan.core.schema.TitanManagement;
 import com.thinkaurelius.titan.core.util.TitanCleanup;
 import com.thinkaurelius.titan.graphdb.tinkerpop.TitanIoRegistry;
+import org.apache.atlas.ApplicationProperties;
+import org.apache.atlas.AtlasException;
+import org.apache.atlas.GraphInitializationException;
+import org.apache.atlas.groovy.GroovyExpression;
+import org.apache.atlas.repository.graphdb.AtlasGraph;
+import org.apache.atlas.repository.graphdb.GraphDatabase;
+import org.apache.atlas.repository.graphdb.GremlinVersion;
+import org.apache.atlas.repository.graphdb.titan1.serializer.BigDecimalSerializer;
+import org.apache.atlas.repository.graphdb.titan1.serializer.BigIntegerSerializer;
+import org.apache.atlas.repository.graphdb.titan1.serializer.StringListSerializer;
+import org.apache.atlas.repository.graphdb.titan1.serializer.TypeCategorySerializer;
+import org.apache.atlas.typesystem.types.DataTypes.TypeCategory;
+import org.apache.atlas.typesystem.types.IDataType;
+import org.apache.commons.configuration.Configuration;
+import org.apache.tinkerpop.gremlin.structure.io.graphson.GraphSONMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Map;
 
 /**
  * Default implementation for Graph Provider that doles out Titan Graph.
@@ -145,6 +148,7 @@ public class Titan1GraphDatabase implements GraphDatabase<Titan1Vertex, Titan1Ed
         return graphInstance != null;
     }
 
+
     @Override
     public void initializeTestGraph() {
         //nothing to do
@@ -152,7 +156,7 @@ public class Titan1GraphDatabase implements GraphDatabase<Titan1Vertex, Titan1Ed
     }
 
     @Override
-    public void cleanup() {
+    public void cleanup(boolean deleteGraph) {
         try {
             getGraphInstance().close();
         } catch (Throwable t) {
@@ -169,8 +173,58 @@ public class Titan1GraphDatabase implements GraphDatabase<Titan1Vertex, Titan1Ed
     }
 
     @Override
-    public AtlasGraph<Titan1Vertex, Titan1Edge> getGraph() {
+    public void initialize(Map<String, String> initParams) throws GraphInitializationException {
+        //nothing to do, multi-tenancy is not implemented for Titan 1 at this time.
+
+    }
+
+    @Override
+    public boolean isGraphScanAllowed() {
+        return true;
+    }
+
+    @Override
+    public AtlasGraph<Titan1Vertex, Titan1Edge> getUserGraph() {
+        // force graph loading up front to avoid bootstrapping
+        // issues
         getGraphInstance();
         return atlasGraphInstance;
+    }
+
+    @Override
+    public AtlasGraph<Titan1Vertex, Titan1Edge> getSharedGraph() {
+        return getUserGraph();
+    }
+
+    @Override
+    public GroovyExpression generatePersisentToLogicalConversionExpression(GroovyExpression expr, IDataType<?> type) {
+        //nothing special needed, value is stored in required type
+        return expr;
+    }
+
+    @Override
+    public boolean isPropertyValueConversionNeeded(IDataType<?> type) {
+        return false;
+    }
+
+    @Override
+    public boolean requiresInitialIndexedPredicate() {
+        return false;
+    }
+
+    @Override
+    public GroovyExpression getInitialIndexedPredicate(GroovyExpression parent) {
+        return parent;
+    }
+
+    @Override
+    public GroovyExpression addOutputTransformationPredicate(GroovyExpression expr, boolean isSelect, boolean isPath) {
+        return expr;
+    }
+
+    @Override
+    public GremlinVersion getSupportedGremlinVersion() {
+
+        return GremlinVersion.THREE;
     }
 }

@@ -29,6 +29,7 @@ public class VariableAssignmentExpression extends AbstractGroovyExpression {
     private String type = null;
     private String name;
     private GroovyExpression value;
+    private boolean isOmitDeclaration = false;
 
     /**
      * @param string
@@ -40,33 +41,51 @@ public class VariableAssignmentExpression extends AbstractGroovyExpression {
         this.value = v;
     }
 
+
     public VariableAssignmentExpression(String name, GroovyExpression v) {
         this(null, name, v);
     }
 
+    public void setOmitDeclaration(boolean omitDeclaration) {
+        this.isOmitDeclaration = omitDeclaration;
+    }
+
     @Override
     public void generateGroovy(GroovyGenerationContext context) {
-        if (type == null) {
-            context.append("def ");
-        } else {
-            context.append(type);
-            context.append(" ");
+        if (!isOmitDeclaration) {
+            if (type == null) {
+                context.append("def ");
+            } else {
+                context.append(type);
+                context.append(" ");
+            }
         }
         context.append(name);
-        context.append("=");
-        value.generateGroovy(context);
-
+        if (value != null) {
+            context.append("=");
+            value.generateGroovy(context);
+        }
     }
 
     @Override
     public List<GroovyExpression> getChildren() {
+        if (value == null) {
+            return Collections.emptyList();
+        }
         return Collections.singletonList(value);
     }
 
     @Override
     public GroovyExpression copy(List<GroovyExpression> newChildren) {
-        assert newChildren.size() == 1;
-        return new VariableAssignmentExpression(name, newChildren.get(0));
+        assert newChildren.size() == (value != null ? 1 : 0);
+        VariableAssignmentExpression result;
+        if (value == null) {
+            result = new VariableAssignmentExpression(type, name, null);
+        } else {
+            result = new VariableAssignmentExpression(type, name, newChildren.get(0));
+        }
+        result.setOmitDeclaration(isOmitDeclaration);
+        return result;
     }
 
 }

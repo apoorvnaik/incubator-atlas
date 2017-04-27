@@ -26,7 +26,8 @@ import org.eclipse.jetty.webapp.WebAppContext;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-import java.net.HttpURLConnection;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
 import java.net.URL;
 
 import static org.apache.atlas.security.SecurityProperties.CERT_STORES_CREDENTIAL_PROVIDER_PATH;
@@ -59,7 +60,7 @@ public class SecureEmbeddedServerTest extends SecureEmbeddedServerTestBase {
                 protected WebAppContext getWebAppContext(String path) {
                     WebAppContext application = new WebAppContext(path, "/");
                     application.setDescriptor(
-                            System.getProperty("projectBaseDir") + "/webapp/src/test/webapp/WEB-INF/web.xml");
+                            TestUtils.getProjectBaseDir() + "/webapp/src/test/webapp/WEB-INF/web.xml");
                     application.setClassLoader(Thread.currentThread().getContextClassLoader());
                     return application;
                 }
@@ -68,7 +69,11 @@ public class SecureEmbeddedServerTest extends SecureEmbeddedServerTestBase {
             secureEmbeddedServer.server.start();
 
             URL url = new URL("https://localhost:21443/api/atlas/admin/status");
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
+            SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
+            sslContext.init(null, createClientTrustManagers(), null);
+            connection.setSSLSocketFactory(sslContext.getSocketFactory());
+            connection.setHostnameVerifier(createLocalhostOnlyHostnameVerifier());
             connection.setRequestMethod("GET");
             connection.connect();
 

@@ -17,10 +17,11 @@
  */
 package org.apache.atlas.web.adapters;
 
+import com.google.inject.Inject;
 import org.apache.atlas.AtlasClient;
-import org.apache.atlas.RequestContextV1;
-import org.apache.atlas.RepositoryMetadataModule;
 import org.apache.atlas.RequestContext;
+import org.apache.atlas.RequestContextV1;
+import org.apache.atlas.TestMetadataModule;
 import org.apache.atlas.TestUtilsV2;
 import org.apache.atlas.model.instance.AtlasClassification;
 import org.apache.atlas.model.instance.AtlasEntity;
@@ -37,19 +38,17 @@ import org.apache.atlas.repository.store.bootstrap.AtlasTypeDefStoreInitializer;
 import org.apache.atlas.store.AtlasTypeDefStore;
 import org.apache.atlas.type.AtlasType;
 import org.apache.atlas.type.AtlasTypeRegistry;
-
 import org.apache.atlas.type.AtlasTypeUtil;
 import org.apache.atlas.web.rest.EntityREST;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testng.Assert;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
-import org.testng.annotations.AfterClass;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
-import javax.inject.Inject;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -58,7 +57,7 @@ import java.util.List;
 import java.util.Map;
 
 
-@Guice(modules = {RepositoryMetadataModule.class})
+@Guice(modules = {TestMetadataModule.class})
 public class TestEntitiesREST {
 
     private static final Logger LOG = LoggerFactory.getLogger(TestEntitiesREST.class);

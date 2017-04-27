@@ -18,10 +18,6 @@
 
 package org.apache.atlas.repository.graphdb.titan0;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
 import org.apache.atlas.repository.Constants;
 import org.apache.atlas.repository.graphdb.AtlasCardinality;
 import org.apache.atlas.repository.graphdb.AtlasGraph;
@@ -31,6 +27,10 @@ import org.apache.atlas.repository.graphdb.AtlasVertex;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  *
@@ -54,7 +54,7 @@ public abstract class AbstractGraphDatabaseTest {
     @BeforeClass
     public static void createIndices() {
         Titan0GraphDatabase db = new Titan0GraphDatabase();
-        AtlasGraphManagement mgmt = db.getGraph().getManagementSystem();
+        AtlasGraphManagement mgmt = db.getSharedGraph().getManagementSystem();
 
         if (mgmt.getGraphIndex(BACKING_INDEX_NAME) == null) {
             mgmt.createVertexIndex(BACKING_INDEX_NAME, Constants.BACKING_INDEX,

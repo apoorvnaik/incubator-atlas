@@ -16,8 +16,7 @@
  */
 package org.apache.atlas.web.listeners;
 
-import javax.servlet.ServletContextEvent;
-
+import com.google.inject.Module;
 import org.apache.atlas.ApplicationProperties;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.repository.graph.AtlasGraphProvider;
@@ -26,7 +25,7 @@ import org.apache.commons.configuration.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.inject.Module;
+import javax.servlet.ServletContextEvent;
 
 public class TestGuiceServletConfig extends GuiceServletConfig {
 
@@ -36,6 +35,9 @@ public class TestGuiceServletConfig extends GuiceServletConfig {
     @Override
     public void contextInitialized(ServletContextEvent servletContextEvent) {
         LOG.info("Initializing test servlet listener");
+        //Perform any configuration needed prior to running the tests
+        //so that they run in a clean environment.
+        AtlasGraphProvider.initializeTestGraph();
         super.contextInitialized(servletContextEvent);
     }
 

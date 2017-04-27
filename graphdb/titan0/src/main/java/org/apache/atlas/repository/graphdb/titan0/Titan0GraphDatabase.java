@@ -18,19 +18,6 @@
 
 package org.apache.atlas.repository.graphdb.titan0;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
-import java.util.HashMap;
-import java.util.Map;
-
-import org.apache.atlas.ApplicationProperties;
-import org.apache.atlas.AtlasException;
-import org.apache.atlas.repository.graphdb.AtlasGraph;
-import org.apache.atlas.repository.graphdb.GraphDatabase;
-import org.apache.commons.configuration.Configuration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.collect.ImmutableMap;
 import com.thinkaurelius.titan.core.TitanFactory;
 import com.thinkaurelius.titan.core.TitanGraph;
@@ -38,6 +25,22 @@ import com.thinkaurelius.titan.core.schema.TitanManagement;
 import com.thinkaurelius.titan.core.util.TitanCleanup;
 import com.thinkaurelius.titan.diskstorage.StandardIndexProvider;
 import com.thinkaurelius.titan.diskstorage.solr.Solr5Index;
+import org.apache.atlas.ApplicationProperties;
+import org.apache.atlas.AtlasException;
+import org.apache.atlas.GraphInitializationException;
+import org.apache.atlas.groovy.GroovyExpression;
+import org.apache.atlas.repository.graphdb.AtlasGraph;
+import org.apache.atlas.repository.graphdb.GraphDatabase;
+import org.apache.atlas.repository.graphdb.GremlinVersion;
+import org.apache.atlas.typesystem.types.IDataType;
+import org.apache.commons.configuration.Configuration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Titan 0.5.4 implementation of GraphDatabase.
@@ -165,11 +168,16 @@ public class Titan0GraphDatabase implements GraphDatabase<Titan0Vertex, Titan0Ed
     }
 
     @Override
-    public AtlasGraph<Titan0Vertex, Titan0Edge> getGraph() {
+    public AtlasGraph<Titan0Vertex, Titan0Edge> getUserGraph() {
         // force graph loading up front to avoid bootstrapping
         // issues
         getGraphInstance();
         return atlasGraphInstance;
+    }
+
+    @Override
+    public AtlasGraph<Titan0Vertex, Titan0Edge> getSharedGraph() {
+        return getUserGraph();
     }
 
     @Override
@@ -185,7 +193,12 @@ public class Titan0GraphDatabase implements GraphDatabase<Titan0Vertex, Titan0Ed
     }
 
     @Override
-    public void cleanup() {
+    public void cleanup(boolean deleteGraph) {
+
+        if(! isGraphLoaded()) {
+            return;
+        }
+
         try {
             getGraphInstance().shutdown();
         } catch(Throwable t) {
@@ -201,4 +214,48 @@ public class Titan0GraphDatabase implements GraphDatabase<Titan0Vertex, Titan0Ed
         }
     }
 
+    @Override
+    public void initialize(Map<String, String> initParams) throws GraphInitializationException {
+        //nothing to do, multi-tenancy is not implemented for Titan 0 at this time.
+
+    }
+
+    @Override
+    public boolean isGraphScanAllowed() {
+        return true;
+    }
+
+    @Override
+    public GremlinVersion getSupportedGremlinVersion() {
+
+        return GremlinVersion.TWO;
+    }
+
+    @Override
+    public GroovyExpression generatePersisentToLogicalConversionExpression(GroovyExpression expr, IDataType<?> type) {
+
+        //nothing special needed, value is stored in required type
+        return expr;
+    }
+
+    @Override
+    public boolean isPropertyValueConversionNeeded(IDataType<?> type) {
+
+        return false;
+    }
+
+    @Override
+    public boolean requiresInitialIndexedPredicate() {
+        return false;
+    }
+
+    @Override
+    public GroovyExpression getInitialIndexedPredicate(GroovyExpression expr) {
+        return expr;
+    }
+
+    @Override
+    public GroovyExpression addOutputTransformationPredicate(GroovyExpression expr, boolean inSelect, boolean isPath) {
+        return expr;
+    }
 }

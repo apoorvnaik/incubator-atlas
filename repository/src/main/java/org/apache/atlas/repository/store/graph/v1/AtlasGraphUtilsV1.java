@@ -293,7 +293,7 @@ public class AtlasGraphUtilsV1 {
             if (LOG.isDebugEnabled()) {
                 return getVertexDetails(vertex);
             } else {
-                return String.format("vertex[id=%s]", vertex.getId().toString());
+                return String.format("vertex[id=%s]", vertex.getIdForDisplay());
             }
         }
     }
@@ -306,18 +306,18 @@ public class AtlasGraphUtilsV1 {
             if (LOG.isDebugEnabled()) {
                 return getEdgeDetails(edge);
             } else {
-                return String.format("edge[id=%s]", edge.getId().toString());
+                return String.format("edge[id=%s]", edge.getIdForDisplay());
             }
         }
     }
 
     public static String getVertexDetails(AtlasVertex vertex) {
         return String.format("vertex[id=%s type=%s guid=%s]",
-                vertex.getId().toString(), getTypeName(vertex), getIdFromVertex(vertex));
+                vertex.getIdForDisplay(), getTypeName(vertex), getIdFromVertex(vertex));
     }
 
     public static String getEdgeDetails(AtlasEdge edge) {
-        return String.format("edge[id=%s label=%s from %s -> to %s]", edge.getId(), edge.getLabel(),
+        return String.format("edge[id=%s label=%s from %s -> to %s]", edge.getIdForDisplay(), edge.getLabel(),
                 toString(edge.getOutVertex()), toString(edge.getInVertex()));
     }
 

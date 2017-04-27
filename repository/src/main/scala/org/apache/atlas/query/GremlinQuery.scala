@@ -85,6 +85,7 @@ import org.apache.atlas.query.Expressions.CountExpression
 
 import org.apache.atlas.util.AtlasRepositoryConfiguration
 import java.util.HashSet
+import org.apache.atlas.repository.graph.AtlasGraphProvider
 
 trait IntSequence {
     def next: Int
@@ -709,7 +710,7 @@ class GremlinTranslator(expr: Expression,
         q = genQuery(q, expr, false)
 
         q = GremlinExpressionFactory.INSTANCE.generateToListExpression(q);
-        q = gPersistenceBehavior.getGraph().addOutputTransformationPredicate(q, hasSelect, expr.isInstanceOf[PathExpression]);
+        q = AtlasGraphProvider.addOutputTransformationPredicate(q, hasSelect, expr.isInstanceOf[PathExpression]);
 
 
         if(AtlasRepositoryConfiguration.isGremlinOptimizerEnabled()) {

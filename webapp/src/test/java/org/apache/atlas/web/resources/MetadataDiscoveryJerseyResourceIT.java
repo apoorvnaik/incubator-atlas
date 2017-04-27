@@ -146,7 +146,8 @@ public class MetadataDiscoveryJerseyResourceIT extends BaseResourceIT {
 
     @Test
     public void testSearchUsingGremlin() throws Exception {
-        String query = "g.V.has('type', '" + BaseResourceIT.HIVE_TABLE_TYPE + "').toList()";
+
+        String query = "g.V().has('type', '" + BaseResourceIT.HIVE_TABLE_TYPE + "').toList()";
         MultivaluedMap<String, String> queryParams = new MultivaluedMapImpl();
         queryParams.add("query", query);
 

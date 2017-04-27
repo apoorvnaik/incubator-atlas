@@ -18,30 +18,10 @@
 
 package org.apache.atlas.discovery;
 
-import static org.apache.atlas.typesystem.types.utils.TypesUtil.createClassTypeDef;
-import static org.apache.atlas.typesystem.types.utils.TypesUtil.createOptionalAttrDef;
-import static org.apache.atlas.typesystem.types.utils.TypesUtil.createRequiredAttrDef;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertNotNull;
-
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import javax.inject.Inject;
-
+import com.google.common.collect.ImmutableSet;
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.BaseRepositoryTest;
 import org.apache.atlas.RepositoryMetadataModule;
-import org.apache.atlas.RequestContext;
 import org.apache.atlas.TestUtils;
 import org.apache.atlas.discovery.graph.GraphBackedDiscoveryService;
 import org.apache.atlas.query.QueryParams;
@@ -64,7 +44,6 @@ import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.testng.Assert;
-import org.testng.SkipException;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
@@ -72,7 +51,15 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
-import com.google.common.collect.ImmutableSet;
+import javax.inject.Inject;
+import java.text.SimpleDateFormat;
+import java.util.*;
+
+import static org.apache.atlas.typesystem.types.utils.TypesUtil.createClassTypeDef;
+import static org.apache.atlas.typesystem.types.utils.TypesUtil.createOptionalAttrDef;
+import static org.apache.atlas.typesystem.types.utils.TypesUtil.createRequiredAttrDef;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotNull;
 
 @Guice(modules = RepositoryMetadataModule.class)
 public class GraphBackedDiscoveryServiceTest extends BaseRepositoryTest {
@@ -107,6 +94,9 @@ public class GraphBackedDiscoveryServiceTest extends BaseRepositoryTest {
         ITypedReferenceableInstance instance = personType.createInstance(janeGuid);
         instance.set("orgLevel", "L1");
         repositoryService.updatePartial(instance);
+        
+        //Give indexer a chance to catch up
+        Thread.sleep(2000);
     }
 
     private void addIndexesForNewTypes(Collection<String> oldTypeNames, final TypeSystem typeSystem) throws AtlasException {
@@ -133,7 +123,7 @@ public class GraphBackedDiscoveryServiceTest extends BaseRepositoryTest {
 
     @BeforeMethod
     public void setupContext() {
-        RequestContext.createContext();
+        TestUtils.resetRequestContext();
     }
 
     @AfterClass
@@ -278,6 +268,7 @@ public class GraphBackedDiscoveryServiceTest extends BaseRepositoryTest {
     @Test
     public void testRawSearch1() throws Exception {
         TestUtils.skipForGremlin3EnabledGraphDb();
+        TestUtils.skipIfGraphScanRequired();
         // Query for all Vertices in Graph
         Object r = discoveryService.searchByGremlin("g.V.toList()");
         Assert.assertTrue(r instanceof List);
@@ -1278,6 +1269,6 @@ public class GraphBackedDiscoveryServiceTest extends BaseRepositoryTest {
     }
 
     private boolean isGremlin3() {
-        return TestUtils.getGraph().getSupportedGremlinVersion() == GremlinVersion.THREE;
+        return AtlasGraphProvider.getSupportedGremlinVersion() == GremlinVersion.THREE;
     }
 }

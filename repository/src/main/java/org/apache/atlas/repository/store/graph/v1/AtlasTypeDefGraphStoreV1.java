@@ -314,7 +314,7 @@ public class AtlasTypeDefGraphStoreV1 extends AtlasTypeDefGraphStore {
         Iterable<AtlasEdge> edges = outVertex.getEdges(AtlasEdgeDirection.OUT, edgeLabel);
 
         for (AtlasEdge edge : edges) {
-            if (edge.getInVertex().getId().equals(inVertex.getId())) {
+            if (edge.getInVertex().equals(inVertex)) {
                 ret = edge;
                 break;
             }

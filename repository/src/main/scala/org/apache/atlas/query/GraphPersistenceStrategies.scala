@@ -35,6 +35,7 @@ import org.apache.atlas.typesystem.ITypedReferenceableInstance
 import org.apache.atlas.typesystem.persistence.Id
 import org.apache.atlas.typesystem.types._
 import org.apache.atlas.typesystem.types.DataTypes._
+import org.apache.atlas.repository.graph.AtlasGraphProvider
 
 /**
  * Represents the Bridge between the QueryProcessor and the Graph Persistence scheme used.
@@ -51,11 +52,11 @@ trait GraphPersistenceStrategies {
     @throws(classOf[RepositoryException])
     def getGraph() : AtlasGraph[_,_]
 
-    def getSupportedGremlinVersion() : GremlinVersion = getGraph().getSupportedGremlinVersion;
-    def generatePersisentToLogicalConversionExpression(expr: GroovyExpression, t: IDataType[_]) : GroovyExpression = getGraph().generatePersisentToLogicalConversionExpression(expr, t);
-    def isPropertyValueConversionNeeded(attrType: IDataType[_]) : Boolean = getGraph().isPropertyValueConversionNeeded(attrType);
+    def getSupportedGremlinVersion() : GremlinVersion = AtlasGraphProvider.getSupportedGremlinVersion();
+    def generatePersisentToLogicalConversionExpression(expr: GroovyExpression, t: IDataType[_]) : GroovyExpression = AtlasGraphProvider.generatePersisentToLogicalConversionExpression(expr, t);
+    def isPropertyValueConversionNeeded(attrType: IDataType[_]) : Boolean = AtlasGraphProvider.isPropertyValueConversionNeeded(attrType);
 
-    def addInitialQueryCondition(parent: GroovyExpression) : GroovyExpression = if (getGraph().requiresInitialIndexedPredicate()) { getGraph().getInitialIndexedPredicate(parent) } else { parent };
+    def addInitialQueryCondition(parent: GroovyExpression) : GroovyExpression = if (AtlasGraphProvider.requiresInitialIndexedPredicate()) { AtlasGraphProvider.getInitialIndexedPredicate(parent) } else { parent };
 
     /**
      * Name of attribute used to store typeName in vertex

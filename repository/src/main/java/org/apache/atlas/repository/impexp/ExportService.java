@@ -57,7 +57,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.script.ScriptEngine;
-import javax.script.ScriptException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -556,8 +555,8 @@ public class ExportService {
 
     private List<HashMap<String, Object>> executeGremlinQuery(String query, ExportContext context) {
         try {
-            return (List<HashMap<String, Object>>) atlasGraph.executeGremlinScript(context.scriptEngine, context.bindings, query, false);
-        } catch (ScriptException e) {
+            return (List<HashMap<String, Object>>) atlasGraph.executeGremlinScript(query, context.bindings, false);
+        } catch (AtlasBaseException e) {
             LOG.error("Script execution failed for query: ", query, e);
             return null;
         }
@@ -565,8 +564,8 @@ public class ExportService {
 
     private List<String> executeGremlinQueryForGuids(String query, ExportContext context) {
         try {
-            return (List<String>) atlasGraph.executeGremlinScript(context.scriptEngine, context.bindings, query, false);
-        } catch (ScriptException e) {
+            return (List<String>) atlasGraph.executeGremlinScript(query, context.bindings, false);
+        } catch (AtlasBaseException e) {
             LOG.error("Script execution failed for query: ", query, e);
             return null;
         }

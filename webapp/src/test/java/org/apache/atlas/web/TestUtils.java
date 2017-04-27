@@ -24,6 +24,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileWriter;
+import java.net.URISyntaxException;
+import java.net.URL;
 
 public class TestUtils {
     private static final Logger LOG = LoggerFactory.getLogger(TestUtils.class);
@@ -44,16 +46,58 @@ public class TestUtils {
     }
 
     public static String getTempDirectory() {
-        return System.getProperty("projectBaseDir") + "/webapp/target/" + random();
+        return getProjectBaseDir() + "/webapp/target/" + random();
     }
 
     public static String getWarPath() {
-        return System.getProperty("projectBaseDir") + String.format("/webapp/target/atlas-webapp-%s",
+        return getProjectBaseDir() + String.format("/webapp/target/atlas-webapp-%s",
                 System.getProperty("project.version"));
     }
 
     public static String getTargetDirectory() {
-        return System.getProperty("projectBaseDir") + "/webapp/target" ;
+        return getProjectBaseDir() + "/webapp/target";
+    }
+
+    public static String getWebAppDirectory() {
+        return getProjectBaseDir() + "/webapp";
+    }
+
+    public static String getProjectBaseDir() {
+        String projectBaseDir = System.getProperty("projectBaseDir");
+        if (projectBaseDir == null) {
+            // In the case the test is run directly from Eclipse
+            projectBaseDir = locateProjectBaseDirFromClassPath();
+        }
+        return projectBaseDir;
+    }
+
+    private static String locateProjectBaseDirFromClassPath() {
+        String projectBaseDir = null;
+        Class<?> class_ = TestUtils.class;
+        String classResource = String.format("/%s.class", class_.getName().replaceAll("\\.", "/"));
+        URL classUrl = class_.getResource(classResource);
+        if (classUrl != null) {
+            try {
+                File classFile = new File(classUrl.toURI());
+                File webappProjectDir = null;
+                File current = classFile.getParentFile();
+                while (webappProjectDir == null && current != null) {
+                    File potentialPomFile = new File(current, "pom.xml");
+                    if (potentialPomFile.exists()) {
+                        webappProjectDir = current;
+                    } else {
+                        current = current.getParentFile();
+                    }
+                }
+                if (webappProjectDir != null) {
+                    projectBaseDir = webappProjectDir.getParentFile().getAbsolutePath();
+                }
+                System.out.println();
+            } catch (URISyntaxException e) {
+                LOG.warn("Cannot locate class file: " + e.getMessage());
+            }
+        }
+        return projectBaseDir;
     }
 
 }

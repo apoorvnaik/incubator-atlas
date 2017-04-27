@@ -17,17 +17,14 @@
  */
 package org.apache.atlas.repository.graphdb;
 
+import org.apache.atlas.exception.AtlasBaseException;
+
+import javax.script.ScriptEngine;
+import javax.script.ScriptException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Map;
 import java.util.Set;
-
-import javax.script.ScriptEngine;
-import javax.script.ScriptException;
-
-import org.apache.atlas.exception.AtlasBaseException;
-import org.apache.atlas.groovy.GroovyExpression;
-import org.apache.atlas.typesystem.types.IDataType;
 
 /**
  * Represents a graph.
@@ -196,65 +193,6 @@ public interface AtlasGraph<V, E> {
      */
     void exportToGson(OutputStream os) throws IOException;
 
-    //the following methods insulate Atlas from the details
-    //of the interaction with Gremlin
-
-    /**
-     * This method is used in the generation of queries.  It is used to
-     * convert property values from the value that is stored in the graph
-     * to the value/type that the user expects to get back.
-     *
-     * @param expr - gremlin expr that represents the persistent property value
-     * @param type
-     * @return
-     */
-    GroovyExpression generatePersisentToLogicalConversionExpression(GroovyExpression valueExpr, IDataType<?> type);
-
-    /**
-     * Indicates whether or not stored values with the specified type need to be converted
-     * within generated gremlin queries before they can be compared with literal values.
-     * As an example, a graph database might choose to store Long values as Strings or
-     * List values as a delimited list.  In this case, the generated gremlin needs to
-     * convert the stored property value prior to comparing it a literal.  In this returns
-     * true, @code{generatePersisentToLogicalConversionExpression} is used to generate a
-     * gremlin expression with the converted value.  In addition, this cause the gremlin
-     * 'filter' step to be used to compare the values instead of a 'has' step.
-     */
-    boolean isPropertyValueConversionNeeded(IDataType<?> type);
-
-    /**
-     * Gets the version of Gremlin that this graph uses.
-     *
-     * @return
-     */
-    GremlinVersion getSupportedGremlinVersion();
-
-    /**
-     * Whether or not an initial predicate needs to be added to gremlin queries
-     * in order for them to run successfully.  This is needed for some graph database where
-     * graph scans are disabled.
-     * @return
-     */
-    boolean requiresInitialIndexedPredicate();
-
-    /**
-     * Some graph database backends have graph scans disabled.  In order to execute some queries there,
-     * an initial 'dummy' predicate needs to be added to gremlin queries so that the first
-     * condition uses an index.
-     *
-     * @return
-     */
-    GroovyExpression getInitialIndexedPredicate(GroovyExpression parent);
-
-    /**
-     * As an optimization, a graph database implementation may want to retrieve additional
-     * information about the query results.  For example, in the IBM Graph implementation,
-     * this changes the query to return both matching vertices and their outgoing edges to
-     * avoid the need to make an extra REST API call to look up those edges.  For implementations
-     * that do not require any kind of transform, an empty String should be returned.
-     */
-    GroovyExpression addOutputTransformationPredicate(GroovyExpression expr, boolean isSelect, boolean isPath);
-
     /**
      * Get an instance of the script engine to execute Gremlin queries
      *
@@ -285,7 +223,6 @@ public interface AtlasGraph<V, E> {
      * Executes a Gremlin script using a ScriptEngineManager provided by consumer, returns an object with the result.
      * This is useful for scenarios where an operation executes large number of queries.
      *
-     * @param scriptEngine: ScriptEngine initialized by consumer.
      * @param bindings: Update bindings with Graph instance for ScriptEngine that is initilized externally.
      * @param query
      * @param isPath whether this is a path query
@@ -294,7 +231,7 @@ public interface AtlasGraph<V, E> {
      *
      * @throws ScriptException
      */
-    Object executeGremlinScript(ScriptEngine scriptEngine, Map<? extends  String, ? extends  Object> bindings, String query, boolean isPath) throws ScriptException;
+    Object executeGremlinScript(String query, Map<String,Object> bindings, boolean isPath) throws AtlasBaseException;
 
 
     /**

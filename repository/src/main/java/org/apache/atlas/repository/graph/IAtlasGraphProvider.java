@@ -18,7 +18,6 @@
 
 package org.apache.atlas.repository.graph;
 
-import org.apache.atlas.repository.RepositoryException;
 import org.apache.atlas.repository.graphdb.AtlasGraph;
 
 /**
@@ -27,6 +26,6 @@ import org.apache.atlas.repository.graphdb.AtlasGraph;
  * lazily.
  */
 public interface IAtlasGraphProvider {
-    
-    AtlasGraph get() throws RepositoryException;
+
+    AtlasGraph get();
 }

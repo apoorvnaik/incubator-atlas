@@ -77,8 +77,8 @@ public abstract class GremlinExpressionFactory {
     protected static final String ORDER_METHOD = "order";
     protected static final String FILL_METHOD = "fill";
 
-    public static final GremlinExpressionFactory INSTANCE = AtlasGraphProvider.getGraphInstance()
-            .getSupportedGremlinVersion() == GremlinVersion.THREE ? new Gremlin3ExpressionFactory()
+    public static final GremlinExpressionFactory INSTANCE = AtlasGraphProvider.getSupportedGremlinVersion()
+            == GremlinVersion.THREE ? new Gremlin3ExpressionFactory()
                     : new Gremlin2ExpressionFactory();
 
     /**

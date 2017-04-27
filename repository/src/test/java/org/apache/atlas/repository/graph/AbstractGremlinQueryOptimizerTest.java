@@ -17,16 +17,6 @@
  */
 package org.apache.atlas.repository.graph;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertNotNull;
-
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-
 import org.apache.atlas.AtlasException;
 import org.apache.atlas.gremlin.GremlinExpressionFactory;
 import org.apache.atlas.gremlin.optimizer.GremlinQueryOptimizer;
@@ -40,33 +30,43 @@ import org.apache.atlas.groovy.TraversalStepType;
 import org.apache.atlas.query.GraphPersistenceStrategies;
 import org.apache.atlas.query.TypeUtils.FieldInfo;
 import org.apache.atlas.repository.Constants;
-import org.apache.atlas.repository.MetadataRepository;
-import org.apache.atlas.repository.RepositoryException;
 import org.apache.atlas.repository.graphdb.AtlasEdgeDirection;
-import org.apache.atlas.repository.graphdb.AtlasGraph;
-import org.apache.atlas.repository.graphdb.GremlinVersion;
 import org.apache.atlas.typesystem.types.AttributeDefinition;
 import org.apache.atlas.typesystem.types.AttributeInfo;
 import org.apache.atlas.typesystem.types.DataTypes;
-import org.apache.atlas.typesystem.types.IDataType;
 import org.apache.atlas.typesystem.types.Multiplicity;
 import org.apache.atlas.typesystem.types.TypeSystem;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
-public abstract class AbstractGremlinQueryOptimizerTest implements IAtlasGraphProvider {
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotNull;
+
+public abstract class AbstractGremlinQueryOptimizerTest {
 
     protected abstract GremlinExpressionFactory getFactory();
 
-    private MetadataRepository repo = new GraphBackedMetadataRepository(this, new HardDeleteHandler(TypeSystem.getInstance()));
     private final GraphPersistenceStrategies STRATEGY = mock(GraphPersistenceStrategies.class);
     @BeforeClass
     public void setUp() {
+        AtlasGraphProvider.initializeTestGraph();
         GremlinQueryOptimizer.reset();
         GremlinQueryOptimizer.setExpressionFactory(getFactory());
         when(STRATEGY.typeAttributeName()).thenReturn(Constants.ENTITY_TYPE_PROPERTY_KEY);
         when(STRATEGY.superTypeAttributeName()).thenReturn(Constants.SUPER_TYPES_PROPERTY_KEY);
+    }
+
+
+    @AfterClass
+    public void tearDown() {
+        AtlasGraphProvider.cleanup();
     }
 
     private FieldInfo getTestFieldInfo() throws AtlasException {
@@ -188,7 +188,7 @@ public abstract class AbstractGremlinQueryOptimizerTest implements IAtlasGraphPr
 
 
         GroovyExpression input = getVerticesExpression();
-        input = getFactory().generateTypeTestExpression(STRATEGY,  input, "DataSet", TestIntSequence.INSTANCE).get(0);
+        input = getFactory().generateTypeTestExpression(STRATEGY,  input, "DataSet", MockIntSequence.INSTANCE).get(0);
         input = makeHasExpression(input, "name","Fred");
         input = getFactory().generateAliasExpression(input, "label");
 
@@ -692,14 +692,5 @@ public abstract class AbstractGremlinQueryOptimizerTest implements IAtlasGraphPr
         assertEquals(optimized.toString(), getExpectedGremlinForTestRangeWithOrderBy());
     }
 
-
-
     protected abstract String getExpectedGremlinForTestRangeWithOrderBy();
-    @Override
-    public AtlasGraph get() throws RepositoryException {
-        AtlasGraph graph = mock(AtlasGraph.class);
-        when(graph.getSupportedGremlinVersion()).thenReturn(GremlinVersion.THREE);
-        when(graph.isPropertyValueConversionNeeded(any(IDataType.class))).thenReturn(false);
-        return graph;
-    }
 }

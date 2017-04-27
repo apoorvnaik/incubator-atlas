@@ -55,6 +55,9 @@ atlas.graph.index.search.solr.zookeeper-session-timeout=60000
         <hbase.embedded>false</hbase.embedded>
         <solr.embedded>false</solr.embedded>
 	<entity.repository.properties>atlas.EntityAuditRepository.impl=org.apache.atlas.repository.audit.HBaseBasedAuditRepository</entity.repository.properties>
+        <graphdb.backend>org.apache.atlas.repository.graphdb.titan0.Titan0GraphDatabase</graphdb.backend>
+        <ibm.graph.properties></ibm.graph.properties>
+
     </properties>
 
     <profiles>
@@ -236,6 +239,67 @@ atlas.graph.index.search.solr.zookeeper-session-timeout=60000
                     </plugin>
                 </plugins>
             </build>
+        </profile>
+	<profile>
+	  <id>ibm-graph</id>
+	  <properties>
+                <graphdb.backend>org.apache.atlas.ibmgraph.IBMGraphDatabase</graphdb.backend>
+                <titan.storage.backend>ignored</titan.storage.backend>
+                <titan.storage.properties>  </titan.storage.properties>
+                <titan.index.backend>ignored</titan.index.backend>
+                <titan.index.properties>  </titan.index.properties>
+                <entity.repository.properties>atlas.EntityAuditRepository.impl=org.apache.atlas.repository.audit.NoopEntityAuditRepository</entity.repository.properties>
+                <ibm.graph.properties>
+######## IBM Graph Configuration ########
+
+#Schema batch size.  -1 : unlimited
+#This affects how many indices that Atlas tries to create in each schema REST API call.  The value
+#should be lowered if index creation is failing.  In general, the value should be set as high as
+#possible without timeout or backend connection issues occurring.  Lower values are more
+#stable but also make the index creation slower.  The default value, 20, has been found
+#to be a reasonable compromise in most cases.
+#atlas.graphdb.schema.batchSize=20
+
+#Max number of times to retry when we get a http error when creating or updating the graph schema
+#atlas.graphdb.schema.httpMaxRetries=30
+
+#Max number of times to retry all other http requests to IBM Graph.
+#atlas.graphdb.httpMaxRetries=10
+
+
+#The size of the connection pool for http connections to IBM Graph
+#atlas.graphdb.httpConnectionPoolSize=200
+
+#The http idle connection timeout for IBM Graph, in milliseconds.
+# 0: infinite, disables idle connection closing
+#atlas.graphdb.httpIdleTimeoutMs=30000
+
+#Timeout used when requesting a connection to IBM Graph
+#-1: system default
+# 0: infinite
+#atlas.graphdb.httpConnectionRequestTimeoutMs=-1
+
+
+#Max time to wait for the connection to IBM Grpah to be established.
+#-1: system default
+# 0: infinite
+#atlas.graphdb.httpConnectionTimeoutMs=-1
+
+
+#Maximum time to wait between packets we get from IBM Graph before giving up.
+#-1: system default
+# 0: infinite
+#atlas.graphdb.httpSocketTimeoutMs=30000
+
+#The size of the per-tenant Vertex/Edge LRU Caches
+#atlas.graphdb.ElementCache.capacity=10000
+
+# Allows notifications when items are evicted from the Vertex and Edge
+# caches because they has become full.  A warning will be issued when
+# the specified number of evictions have occurred.  If the eviction
+# warning threshold &lt;= 0, no eviction warnings will be issued.
+#atlas.graphdb.ElementCache.evictionWarningThrottle==0</ibm.graph.properties>
+	  </properties>
         </profile>
     </profiles>
 

@@ -28,7 +28,7 @@ import org.apache.commons.configuration.Configuration;
 public class TestModule extends RepositoryMetadataModule {
     @Override
     protected void bindAuditRepository(Binder binder, Configuration configuration) {
-        //Map EntityAuditRepository interface to hbase based implementation
+        //Map EntityAuditRepository interface to in-memory implementation
         binder.bind(EntityAuditRepository.class).to(InMemoryEntityAuditRepository.class).asEagerSingleton();
     }
 }

@@ -17,22 +17,20 @@
  */
 package org.apache.atlas.repository.graphdb.titan1;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import javax.script.Bindings;
-import javax.script.ScriptEngine;
-import javax.script.ScriptException;
-
+import com.google.common.base.Function;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.thinkaurelius.titan.core.Cardinality;
+import com.thinkaurelius.titan.core.PropertyKey;
+import com.thinkaurelius.titan.core.SchemaViolationException;
+import com.thinkaurelius.titan.core.TitanGraph;
+import com.thinkaurelius.titan.core.TitanIndexQuery;
+import com.thinkaurelius.titan.core.schema.TitanGraphIndex;
+import com.thinkaurelius.titan.core.schema.TitanManagement;
+import com.thinkaurelius.titan.core.util.TitanCleanup;
 import org.apache.atlas.AtlasErrorCode;
 import org.apache.atlas.exception.AtlasBaseException;
-import org.apache.atlas.groovy.GroovyExpression;
 import org.apache.atlas.repository.graphdb.AtlasEdge;
 import org.apache.atlas.repository.graphdb.AtlasGraph;
 import org.apache.atlas.repository.graphdb.AtlasGraphManagement;
@@ -40,10 +38,8 @@ import org.apache.atlas.repository.graphdb.AtlasGraphQuery;
 import org.apache.atlas.repository.graphdb.AtlasIndexQuery;
 import org.apache.atlas.repository.graphdb.AtlasSchemaViolationException;
 import org.apache.atlas.repository.graphdb.AtlasVertex;
-import org.apache.atlas.repository.graphdb.GremlinVersion;
 import org.apache.atlas.repository.graphdb.titan1.query.Titan1GraphQuery;
 import org.apache.atlas.repository.graphdb.utils.IteratorToIterableAdapter;
-import org.apache.atlas.typesystem.types.IDataType;
 import org.apache.tinkerpop.gremlin.groovy.CompilerCustomizerProvider;
 import org.apache.tinkerpop.gremlin.groovy.DefaultImportCustomizerProvider;
 import org.apache.tinkerpop.gremlin.groovy.jsr223.GremlinGroovyScriptEngine;
@@ -57,18 +53,17 @@ import org.apache.tinkerpop.gremlin.structure.io.IoCore;
 import org.apache.tinkerpop.gremlin.structure.io.graphson.GraphSONMapper;
 import org.apache.tinkerpop.gremlin.structure.io.graphson.GraphSONWriter;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.thinkaurelius.titan.core.Cardinality;
-import com.thinkaurelius.titan.core.PropertyKey;
-import com.thinkaurelius.titan.core.SchemaViolationException;
-import com.thinkaurelius.titan.core.TitanGraph;
-import com.thinkaurelius.titan.core.TitanIndexQuery;
-import com.thinkaurelius.titan.core.schema.TitanGraphIndex;
-import com.thinkaurelius.titan.core.schema.TitanManagement;
-import com.thinkaurelius.titan.core.util.TitanCleanup;
+import javax.script.Bindings;
+import javax.script.ScriptEngine;
+import javax.script.ScriptException;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Titan 1.0.0 implementation of AtlasGraph.
@@ -85,6 +80,7 @@ public class Titan1Graph implements AtlasGraph<Titan1Vertex, Titan1Edge> {
     }
 
     private final Set<String> multiProperties;
+    private final ScriptEngine scriptEngine = createScriptEngine();
 
     public Titan1Graph() {
         //determine multi-properties once at startup
@@ -263,11 +259,6 @@ public class Titan1Graph implements AtlasGraph<Titan1Vertex, Titan1Edge> {
     }
 
     @Override
-    public GremlinVersion getSupportedGremlinVersion() {
-
-        return GremlinVersion.THREE;
-    }
-    @Override
     public void clear() {
         TitanGraph graph = getGraph();
         if (graph.isOpen()) {
@@ -292,17 +283,7 @@ public class Titan1Graph implements AtlasGraph<Titan1Vertex, Titan1Edge> {
     }
 
     @Override
-    public GremlinGroovyScriptEngine getGremlinScriptEngine() {
-        Set<String> extraImports = new HashSet<String>();
-        extraImports.add(java.util.function.Function.class.getName());
-
-        Set<String> extraStaticImports = new HashSet<String>();
-        extraStaticImports.add(P.class.getName() + ".*");
-        extraStaticImports.add(__.class.getName() + ".*");
-        CompilerCustomizerProvider provider = new DefaultImportCustomizerProvider(extraImports, extraStaticImports);
-
-        GremlinGroovyScriptEngine scriptEngine = new GremlinGroovyScriptEngine(provider);
-
+    public ScriptEngine getGremlinScriptEngine() throws AtlasBaseException {
         return scriptEngine;
     }
 
@@ -319,12 +300,11 @@ public class Titan1Graph implements AtlasGraph<Titan1Vertex, Titan1Edge> {
 
     @Override
     public Object executeGremlinScript(String query, boolean isPath) throws AtlasBaseException {
-        Object result = executeGremlinScript(query);
-        return convertGremlinValue(result);
+        return executeGremlinScript(query, null, isPath);
     }
 
     private Object executeGremlinScript(String gremlinQuery) throws AtlasBaseException {
-        GremlinGroovyScriptEngine scriptEngine = getGremlinScriptEngine();
+        ScriptEngine scriptEngine = getGremlinScriptEngine();
 
         try {
             Bindings bindings = scriptEngine.createBindings();
@@ -343,42 +323,24 @@ public class Titan1Graph implements AtlasGraph<Titan1Vertex, Titan1Edge> {
     }
 
     @Override
-    public Object executeGremlinScript(ScriptEngine scriptEngine,
-            Map<? extends  String, ? extends  Object> userBindings, String query, boolean isPath)
-            throws ScriptException {
-        Bindings bindings = scriptEngine.createBindings();
+    public Object executeGremlinScript(String query, Map<String,Object> bindings, boolean isPath)
+            throws AtlasBaseException {
+        Bindings engineBindings = this.scriptEngine.createBindings();
+        engineBindings.put("g", getGraph());
 
-        bindings.putAll(userBindings);
-        bindings.put("g", getGraph());
+        if(bindings != null) {
+            for (Map.Entry<String, Object> entry : bindings.entrySet()) {
+                engineBindings.put(entry.getKey(), entry.getValue());
+            }
+        }
 
-        Object result = scriptEngine.eval(query, bindings);
+        Object result;
+        try {
+            result = scriptEngine.eval(query, engineBindings);
+        } catch (ScriptException e) {
+            throw new AtlasBaseException(e);
+        }
         return convertGremlinValue(result);
-    }
-
-    @Override
-    public GroovyExpression generatePersisentToLogicalConversionExpression(GroovyExpression expr, IDataType<?> type) {
-        //nothing special needed, value is stored in required type
-        return expr;
-    }
-
-    @Override
-    public boolean isPropertyValueConversionNeeded(IDataType<?> type) {
-        return false;
-    }
-
-    @Override
-    public boolean requiresInitialIndexedPredicate() {
-        return false;
-    }
-
-    @Override
-    public GroovyExpression getInitialIndexedPredicate(GroovyExpression parent) {
-        return parent;
-    }
-
-    @Override
-    public GroovyExpression addOutputTransformationPredicate(GroovyExpression expr, boolean isSelect, boolean isPath) {
-        return expr;
     }
 
     public Iterable<AtlasEdge<Titan1Vertex, Titan1Edge>> wrapEdges(Iterator<Edge> it) {
@@ -423,4 +385,16 @@ public class Titan1Graph implements AtlasGraph<Titan1Vertex, Titan1Edge> {
         multiProperties.addAll(names);
     }
 
+    private static GremlinGroovyScriptEngine createScriptEngine() {
+        Set<String> extraImports = new HashSet<String>();
+        extraImports.add(java.util.function.Function.class.getName());
+
+        Set<String> extraStaticImports = new HashSet<String>();
+        extraStaticImports.add(P.class.getName() + ".*");
+        extraStaticImports.add(__.class.getName() + ".*");
+        CompilerCustomizerProvider provider = new DefaultImportCustomizerProvider(extraImports, extraStaticImports);
+
+        GremlinGroovyScriptEngine scriptEngine = new GremlinGroovyScriptEngine(provider);
+        return scriptEngine;
+    }
 }
