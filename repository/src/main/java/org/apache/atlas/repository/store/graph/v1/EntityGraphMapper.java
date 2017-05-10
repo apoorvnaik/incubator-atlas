@@ -253,6 +253,7 @@ public class EntityGraphMapper {
                         mapAttribute(attribute, attrValue, vertex, op, context);
                     } else {
                         LOG.warn("mapAttributes(): invalid attribute {}.{}. Ignored..", struct.getTypeName(), attrName);
+                        throw new AtlasBaseException(AtlasErrorCode.INVALID_VALUE, attrName);
                     }
                 }
             }
