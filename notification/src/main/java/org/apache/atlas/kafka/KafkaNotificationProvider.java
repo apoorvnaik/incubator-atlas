@@ -29,12 +29,16 @@ import org.apache.commons.configuration.Configuration;
  */
 public class KafkaNotificationProvider implements Provider<KafkaNotification> {
 
+    private static KafkaNotification instance;
+
     @Override
     @Provides
     @Singleton
     public KafkaNotification get() {
         try {
             Configuration applicationProperties = ApplicationProperties.get();
+//            if (null == instance) instance = new KafkaNotification(applicationProperties);
+//            return instance;
             return new KafkaNotification(applicationProperties);
         } catch(AtlasException e) {
             throw new RuntimeException(e);

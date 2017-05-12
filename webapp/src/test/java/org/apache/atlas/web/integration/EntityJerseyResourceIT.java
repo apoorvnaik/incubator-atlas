@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.atlas.web.resources;
+package org.apache.atlas.web.integration;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;

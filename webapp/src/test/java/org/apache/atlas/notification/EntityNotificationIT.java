@@ -32,7 +32,7 @@ import org.apache.atlas.typesystem.persistence.Id;
 import org.apache.atlas.typesystem.types.HierarchicalTypeDefinition;
 import org.apache.atlas.typesystem.types.TraitType;
 import org.apache.atlas.typesystem.types.utils.TypesUtil;
-import org.apache.atlas.web.resources.BaseResourceIT;
+import org.apache.atlas.web.integration.BaseResourceIT;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;

@@ -23,7 +23,7 @@ import org.apache.atlas.EntityAuditEvent;
 import org.apache.atlas.notification.hook.HookNotification;
 import org.apache.atlas.typesystem.Referenceable;
 import org.apache.atlas.typesystem.persistence.Id;
-import org.apache.atlas.web.resources.BaseResourceIT;
+import org.apache.atlas.web.integration.BaseResourceIT;
 import org.codehaus.jettison.json.JSONArray;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;

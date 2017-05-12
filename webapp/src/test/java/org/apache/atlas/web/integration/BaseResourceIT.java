@@ -16,11 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.atlas.web.resources;
+package org.apache.atlas.web.integration;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.inject.servlet.GuiceFilter;
 import kafka.consumer.ConsumerTimeoutException;
 import org.apache.atlas.ApplicationProperties;
 import org.apache.atlas.AtlasClient;
@@ -54,16 +55,26 @@ import org.apache.atlas.typesystem.types.*;
 import org.apache.atlas.typesystem.types.utils.TypesUtil;
 import org.apache.atlas.utils.AuthenticationUtil;
 import org.apache.atlas.utils.ParamChecker;
+import org.apache.atlas.web.listeners.TestGuiceServletConfig;
 import org.apache.commons.configuration.Configuration;
+import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.lang.RandomStringUtils;
 import org.codehaus.jettison.json.JSONArray;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.servlet.DefaultServlet;
+import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.context.request.RequestContextListener;
+import org.springframework.web.filter.DelegatingFilterProxy;
 import org.testng.Assert;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 
+import javax.servlet.DispatcherType;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -94,28 +105,86 @@ public abstract class BaseResourceIT {
     protected static final int MAX_WAIT_TIME = 60000;
     protected String[] atlasUrls;
 
-    @BeforeClass
-    public void setUp() throws Exception {
+    private EmbeddedJetty server = new EmbeddedJetty();
 
-        //set high timeouts so that tests do not fail due to read timeouts while you
-        //are stepping through the code in a debugger
-        ApplicationProperties.get().setProperty("atlas.client.readTimeoutMSecs", "100000000");
-        ApplicationProperties.get().setProperty("atlas.client.connectTimeoutMSecs", "100000000");
+    private static boolean setupComplete = false;
 
+    private class EmbeddedJetty {
+        private Server jetty;
 
-        Configuration configuration = ApplicationProperties.get();
-        atlasUrls = configuration.getStringArray(ATLAS_REST_ADDRESS);
+        public void start(int port) {
+            try {
+                jetty = new Server(port);
+                ServletContextHandler servletContextHandler = new ServletContextHandler(jetty, "/", ServletContextHandler.SESSIONS);
+                servletContextHandler.setInitParameter("com.sun.jersey.config.property.packages", "my.package.to.scan");
+                servletContextHandler.setInitParameter("com.sun.jersey.api.json.POJOMappingFeature", "true");
+                servletContextHandler.setInitParameter("guice.packages", "org.apache.atlas.web.resources,org.apache.atlas.web.params,org.apache.atlas.web.rest,org.apache.atlas.web.errors");
+                servletContextHandler.setInitParameter("contextConfigLocation", "classpath:/applicationContext.xml");
 
-        if (atlasUrls == null || atlasUrls.length == 0) {
-            atlasUrls = new String[] { "http://localhost:21000/" };
+                servletContextHandler.addEventListener(new TestGuiceServletConfig());
+                servletContextHandler.addEventListener(new RequestContextListener());
+//                servletContextHandler.addEventListener(new ContextLoaderListener());
+
+                servletContextHandler.addFilter(GuiceFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST, DispatcherType.ASYNC));
+                servletContextHandler.addFilter(DelegatingFilterProxy.class, "/*", EnumSet.of(DispatcherType.REQUEST, DispatcherType.ASYNC));
+
+                servletContextHandler.addServlet(DefaultServlet.class, "/*");
+
+                jetty.setHandler(servletContextHandler);
+                jetty.setStopTimeout(30000);
+                jetty.setStopAtShutdown(true);
+                jetty.start();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         }
 
-        if (!AuthenticationUtil.isKerberosAuthenticationEnabled()) {
-            atlasClientV1 = new AtlasClient(atlasUrls, new String[]{"admin", "admin"});
-            atlasClientV2 = new AtlasClientV2(atlasUrls, new String[]{"admin", "admin"});
-        } else {
-            atlasClientV1 = new AtlasClient(atlasUrls);
-            atlasClientV2 = new AtlasClientV2(atlasUrls);
+        public void stop() {
+            try {
+                jetty.stop();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    @BeforeClass
+    public void setUp() throws Exception {
+        if (!setupComplete) {
+            String fileName = getClass().getClassLoader().getResource("").getPath() + "atlas-test-config.txt";
+            PropertiesConfiguration propertiesConfiguration = new PropertiesConfiguration(fileName);
+            int jettyPort = propertiesConfiguration.getInt("jettyPort", 31000);
+            LOG.info("Starting jetty at {} ", jettyPort);
+            server.start(jettyPort);
+
+            //set high timeouts so that tests do not fail due to read timeouts while you
+            //are stepping through the code in a debugger
+            Configuration configuration = ApplicationProperties.get();
+            configuration.setProperty("atlas.client.readTimeoutMSecs", "100000000");
+            configuration.setProperty("atlas.client.connectTimeoutMSecs", "100000000");
+            configuration.setProperty("atlas.rest.address", "http://localhost:" + jettyPort);
+
+            atlasUrls = configuration.getStringArray(ATLAS_REST_ADDRESS);
+
+            if (atlasUrls == null || atlasUrls.length == 0) {
+                atlasUrls = new String[] { "http://localhost:21000/" };
+            }
+
+            if (!AuthenticationUtil.isKerberosAuthenticationEnabled()) {
+                atlasClientV1 = new AtlasClient(atlasUrls, new String[]{"admin", "admin"});
+                atlasClientV2 = new AtlasClientV2(atlasUrls, new String[]{"admin", "admin"});
+            } else {
+                atlasClientV1 = new AtlasClient(atlasUrls);
+                atlasClientV2 = new AtlasClientV2(atlasUrls);
+            }
+            setupComplete = true;
+        }
+    }
+
+    @AfterClass
+    public void tearDown() throws Exception {
+        if (null != server) {
+            server.stop();
         }
     }
 
@@ -144,7 +213,7 @@ public abstract class BaseResourceIT {
             atlasClientV2.createAtlasTypeDefs(entityDefs);
         }
         catch(AtlasServiceException e) {
-            LOG.warn("Type creation failed for {}", typesDef.toString());
+            LOG.warn("Type creation failed for {}", typesDef);
             LOG.warn(e.toString());
         }
         

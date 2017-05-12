@@ -37,7 +37,7 @@
     </appender>
 
     <logger name="org.apache.atlas" additivity="false">
-        <level value="debug"/>
+        <level value="info"/>
         <appender-ref ref="console"/>
     </logger>
 
