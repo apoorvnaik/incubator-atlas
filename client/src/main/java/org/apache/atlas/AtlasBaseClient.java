@@ -65,7 +65,7 @@ public abstract class AtlasBaseClient {
     static final String UNKNOWN_STATUS = "Unknown status";
     static final String ATLAS_CLIENT_HA_RETRIES_KEY = "atlas.client.ha.retries";
     // Setting the default value based on testing failovers while client code like quickstart is running.
-    static final int DEFAULT_NUM_RETRIES = 4;
+    static final int DEFAULT_NUM_RETRIES = 3;
     static final String ATLAS_CLIENT_HA_SLEEP_INTERVAL_MS_KEY = "atlas.client.ha.sleep.interval.ms";
     // Setting the default value based on testing failovers while client code like quickstart is running.
     // With number of retries, this gives a total time of about 20s for the server to start.
@@ -76,7 +76,6 @@ public abstract class AtlasBaseClient {
     private String basicAuthUser;
     private String basicAuthPassword;
     private AtlasClientContext atlasClientContext;
-    private boolean retryEnabled = false;
 
     protected AtlasBaseClient() {
     }

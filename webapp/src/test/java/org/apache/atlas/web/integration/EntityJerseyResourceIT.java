@@ -78,7 +78,13 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
 
     private static final Logger LOG = LoggerFactory.getLogger(EntityJerseyResourceIT.class);
 
+    private final String DATABASE_NAME = "db" + randomString();
+    private final String TABLE_NAME = "table" + randomString();
     private static final String TRAITS = "traits";
+    private Referenceable tableInstance;
+    private Id tableId;
+    private Id dbId;
+    private String traitName;
 
     private NotificationInterface notificationInterface = NotificationProvider.get();
     private NotificationConsumer<EntityNotification> notificationConsumer;
@@ -88,6 +94,8 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
         super.setUp();
 
         createTypeDefinitionsV1();
+        Referenceable HiveDBInstance = createHiveDBInstanceBuiltIn(DATABASE_NAME);
+        dbId = createInstance(HiveDBInstance);
 
         List<NotificationConsumer<EntityNotification>> consumers =
                 notificationInterface.createConsumers(NotificationInterface.NotificationType.ENTITIES, 1);
@@ -140,14 +148,10 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
 
     @Test
     public void testSubmitEntity() throws Exception {
-        String dbName = "db" + randomString();
-        String tableName = "table" + randomString();
-        Referenceable hiveDBInstance = createHiveDBInstanceBuiltIn(dbName);
-        Id dbId = createInstance(hiveDBInstance);
-        Referenceable referenceable = createHiveTableInstanceBuiltIn(dbName, tableName, dbId);
-        Id id = createInstance(referenceable);
+        tableInstance = createHiveTableInstanceBuiltIn(DATABASE_NAME, TABLE_NAME, dbId);
+        tableId = createInstance(tableInstance);
 
-        final String guid = id._getId();
+        final String guid = tableId._getId();
         try {
             Assert.assertNotNull(UUID.fromString(guid));
         } catch (IllegalArgumentException e) {
@@ -211,6 +215,7 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
 
     @Test
     public void testEntityDeduping() throws Exception {
+        final Referenceable db = new Referenceable(DATABASE_TYPE_BUILTIN);
         final String dbName = "db" + randomString();
         Referenceable HiveDBInstance = createHiveDBInstanceBuiltIn(dbName);
         Id dbIdReference = createInstance(HiveDBInstance);
@@ -248,7 +253,7 @@ public class EntityJerseyResourceIT extends BaseResourceIT {
         //Test the same across references
         Referenceable table = new Referenceable(HIVE_TABLE_TYPE_BUILTIN);
         final String tableName = randomString();
-        Referenceable tableInstance = createHiveTableInstanceBuiltIn(dbName, tableName, dbIdReference);
+        Referenceable tableInstance = createHiveTableInstanceBuiltIn(DATABASE_NAME, tableName, dbIdReference);
         atlasClientV1.createEntity(tableInstance);
         results = searchByDSL(String.format("%s where qualifiedName='%s'", DATABASE_TYPE_BUILTIN, dbName));
         assertEquals(results.length(), 1);

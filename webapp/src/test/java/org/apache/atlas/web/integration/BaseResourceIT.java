@@ -344,18 +344,18 @@ public abstract class BaseResourceIT {
                 TypesUtil.createTraitTypeDef("sec", ImmutableSet.<String>of());
         HierarchicalTypeDefinition<TraitType> financeTrait =
                 TypesUtil.createTraitTypeDef("finance", ImmutableSet.<String>of());
-        HierarchicalTypeDefinition<TraitType> factTrait =
+        /*HierarchicalTypeDefinition<TraitType> factTrait =
                 TypesUtil.createTraitTypeDef("Fact", ImmutableSet.<String>of());
         HierarchicalTypeDefinition<TraitType> etlTrait =
                 TypesUtil.createTraitTypeDef("ETL", ImmutableSet.<String>of());
         HierarchicalTypeDefinition<TraitType> dimensionTrait =
                 TypesUtil.createTraitTypeDef("Dimension", ImmutableSet.<String>of());
         HierarchicalTypeDefinition<TraitType> metricTrait =
-                TypesUtil.createTraitTypeDef("Metric", ImmutableSet.<String>of());
+                TypesUtil.createTraitTypeDef("Metric", ImmutableSet.<String>of());*/
 
         createType(getTypesDef(ImmutableList.of(enumTypeDefinition), ImmutableList.of(structTypeDefinition),
                 ImmutableList.of(classificationTrait, piiTrait, phiTrait, pciTrait,
-                        soxTrait, secTrait, financeTrait, factTrait, etlTrait, dimensionTrait, metricTrait),
+                        soxTrait, secTrait, financeTrait),//, factTrait, etlTrait, dimensionTrait, metricTrait),
                 ImmutableList.of(dbClsDef, columnClsDef, tblClsDef, loadProcessClsDef)));
     }
 
