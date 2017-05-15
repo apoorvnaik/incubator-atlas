@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
 import org.springframework.web.filter.GenericFilterBean;
 
 import javax.servlet.FilterChain;
@@ -44,6 +45,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
+@Component
 public class AtlasAuthorizationFilter extends GenericFilterBean {
 
     private static final Logger LOG = LoggerFactory.getLogger(AtlasAuthorizationFilter.class);
