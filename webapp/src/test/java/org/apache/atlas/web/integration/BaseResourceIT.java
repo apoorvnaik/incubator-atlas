@@ -76,7 +76,7 @@ import static org.testng.Assert.assertTrue;
 
 /**
  * Base class for integration tests.
- * Sets up the web resource and has helper methods to create type and entity.
+ * Sets up the web resource and has helper methods to created type and entity.
  */
 public abstract class BaseResourceIT {
 

@@ -97,7 +97,7 @@ public class AtlasAuthorizationFilter extends GenericFilterBean {
         responseWrapper.setHeader("X-Frame-Options", "DENY");
 
         String pathInfo = request.getServletPath();
-        if (!Strings.isNullOrEmpty(pathInfo) && pathInfo.startsWith(BASE_URL)) {
+        if (!Strings.isNullOrEmpty(pathInfo) && (pathInfo.startsWith(BASE_URL) || BASE_URL.startsWith(pathInfo))) {
             if (isDebugEnabled) {
                 LOG.debug("{} is a valid REST API request!!!", pathInfo);
             }
