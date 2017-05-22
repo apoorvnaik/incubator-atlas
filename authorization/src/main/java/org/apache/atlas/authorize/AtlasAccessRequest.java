@@ -38,6 +38,7 @@ public class AtlasAccessRequest {
     private String clientIPAddress = null;
 
     public AtlasAccessRequest(HttpServletRequest request, String user, Set<String> userGroups) {
+        // Spring Security 4 Change => request.getServletPath() -> request.getPathInfo()
         this(AtlasAuthorizationUtils.getAtlasResourceType(request.getPathInfo()), "*", AtlasAuthorizationUtils
             .getAtlasAction(request.getMethod()), user, userGroups,AtlasAuthorizationUtils.getRequestIpAddress(request));
     }

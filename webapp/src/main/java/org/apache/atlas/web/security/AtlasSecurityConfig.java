@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -108,24 +109,29 @@ public class AtlasSecurityConfig extends WebSecurityConfigurerAdapter {
         authenticationManagerBuilder.authenticationProvider(authenticationProvider);
     }
 
-    protected void configure(HttpSecurity httpSecurity) throws Exception {
-
-        httpSecurity
-                .headers().disable()
-                .servletApi()
-                .and()
-                    .csrf().disable()
-                    .authorizeRequests()
-                    .antMatchers("/login.jsp",
+    @Override
+    public void configure(WebSecurity web) throws Exception {
+        web.ignoring()
+                .antMatchers("/login.jsp",
                         "/css/**",
                         "/img/**",
                         "/libs/**",
                         "/js/**",
                         "/ieerror.html",
                         "/api/atlas/admin/status",
-                        "/api/atlas/admin/metrics").permitAll()
-                    .anyRequest().authenticated()
+                        "/api/atlas/admin/metrics");
+    }
+
+    protected void configure(HttpSecurity httpSecurity) throws Exception {
+
+        //@formatter:off
+        httpSecurity
+                .authorizeRequests().anyRequest().authenticated()
                 .and()
+                    .headers().disable()
+                    .servletApi()
+                .and()
+                    .csrf().disable()
                     .sessionManagement()
                     .enableSessionUrlRewriting(false)
                     .sessionCreationPolicy(SessionCreationPolicy.ALWAYS)
@@ -145,17 +151,19 @@ public class AtlasSecurityConfig extends WebSecurityConfigurerAdapter {
                         .deleteCookies("ATLASSESSIONID")
                         .logoutUrl("/logout.html")
                 .and()
-                    .httpBasic().authenticationEntryPoint(getDelegatingAuthenticationEntryPoint());
+                    .httpBasic()
+                    .authenticationEntryPoint(getDelegatingAuthenticationEntryPoint());
+        //@formatter:on
 
         if (configuration.getBoolean("atlas.server.ha.enabled", false)) {
             LOG.info("Atlas is in HA Mode, enabling ActiveServerFilter");
             httpSecurity.addFilterAfter(activeServerFilter, BasicAuthenticationFilter.class);
         }
-                    httpSecurity
-                            .addFilterAfter(staleTransactionCleanupFilter, BasicAuthenticationFilter.class)
-                            .addFilterAfter(ssoAuthenticationFilter, BasicAuthenticationFilter.class)
-                            .addFilterAfter(atlasAuthenticationFilter, SecurityContextHolderAwareRequestFilter.class)
-                            .addFilterAfter(csrfPreventionFilter, AtlasAuthenticationFilter.class)
-                            .addFilterAfter(atlasAuthorizationFilter, FilterSecurityInterceptor.class);
+        httpSecurity
+                .addFilterAfter(staleTransactionCleanupFilter, BasicAuthenticationFilter.class)
+                .addFilterAfter(ssoAuthenticationFilter, BasicAuthenticationFilter.class)
+                .addFilterAfter(atlasAuthenticationFilter, SecurityContextHolderAwareRequestFilter.class)
+                .addFilterAfter(csrfPreventionFilter, AtlasAuthenticationFilter.class)
+                .addFilterAfter(atlasAuthorizationFilter, FilterSecurityInterceptor.class);
     }
 }

@@ -115,10 +115,11 @@ public class AtlasAuthorizationFilter extends GenericFilterBean {
                 }
             } else {
                 if (LOG.isErrorEnabled()) {
-                    LOG.error("Cannot obtain Security Context : {}", auth);
+                    LOG.error("Cannot obtain Security Context");
                 }
-                throw new ServletException("Cannot obtain Security Context : " + auth);
+                throw new ServletException("Cannot obtain Security Context");
             }
+
             AtlasAccessRequest atlasRequest = new AtlasAccessRequest(request, userName, groups);
             if (isDebugEnabled) {
                 LOG.debug("============================\nUserName :: {}\nGroups :: {}\nURL :: {}\nAction :: {}\nrequest.getServletPath() :: {}\n============================\n", atlasRequest.getUser(), atlasRequest.getUserGroups(), request.getRequestURL(), atlasRequest.getAction(), pathInfo);
