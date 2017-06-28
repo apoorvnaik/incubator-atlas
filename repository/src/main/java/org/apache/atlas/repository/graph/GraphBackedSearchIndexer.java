@@ -68,8 +68,10 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.apache.atlas.model.typedef.AtlasBaseTypeDef.*;
 
@@ -96,6 +98,8 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
 
     //allows injection of a dummy graph for testing
     private IAtlasGraphProvider provider;
+
+    private Set<String> vertexIndexKeys = new HashSet<>();
     
     @Inject
     public GraphBackedSearchIndexer(AtlasTypeRegistry typeRegistry) throws AtlasException {
@@ -192,7 +196,6 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
             throw new RepositoryException(t);
         }
     }
-   
 
     private void createFullTextIndex(AtlasGraphManagement management) {
         AtlasPropertyKey fullText =
@@ -245,6 +248,10 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
     @Override
     public void onChange(Collection<? extends IDataType> dataTypes) throws AtlasException {
         onAdd(dataTypes);
+    }
+
+    public Set<String> getVertexIndexKeys() {
+        return vertexIndexKeys;
     }
 
     private void addIndexForType(AtlasGraphManagement management, AtlasBaseTypeDef typeDef) {
@@ -580,7 +587,18 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
         } catch (Exception e) {
             LOG.error("Index commit failed", e);
             throw new IndexException("Index commit failed ", e);
+        } finally {
+            vertexIndexKeys = getVertexIndexKeys(management);
         }
+    }
+
+    private Set<String> getVertexIndexKeys(AtlasGraphManagement management) {
+        AtlasGraphIndex vertexIndex = management.getGraphIndex(Constants.VERTEX_INDEX);
+        Set<String> indexKeys = new HashSet<>();
+        for (AtlasPropertyKey fieldKey : vertexIndex.getFieldKeys()) {
+            indexKeys.add(fieldKey.getName());
+        }
+        return indexKeys;
     }
 
     private void rollback(AtlasGraphManagement management) throws IndexException {
@@ -589,6 +607,8 @@ public class GraphBackedSearchIndexer implements SearchIndexer, ActiveStateChang
         } catch (Exception e) {
             LOG.error("Index rollback failed ", e);
             throw new IndexException("Index rollback failed ", e);
+        } finally {
+            vertexIndexKeys = getVertexIndexKeys(management);
         }
     }
 

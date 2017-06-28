@@ -39,7 +39,12 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Utility methods for Graph.
@@ -51,6 +56,8 @@ public class AtlasGraphUtilsV1 {
     public static final String SUPERTYPE_EDGE_LABEL = PROPERTY_PREFIX + ".supertype";
     public static final String VERTEX_TYPE          = "typeSystem";
     public static final String RELATIONSHIPTYPE_EDGE_LABEL = PROPERTY_PREFIX + ".relationshipType";
+
+    private static Set<String> vertexIndexKeys = new HashSet<>();
 
 
     public static String getTypeDefPropertyKey(AtlasBaseTypeDef typeDef) {
@@ -359,4 +366,5 @@ public class AtlasGraphUtilsV1 {
     public static String getStateAsString(AtlasElement element) {
         return element.getProperty(Constants.STATE_PROPERTY_KEY, String.class);
     }
+
 }

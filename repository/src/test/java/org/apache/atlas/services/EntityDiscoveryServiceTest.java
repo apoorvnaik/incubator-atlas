@@ -17,19 +17,30 @@
  */
 package org.apache.atlas.services;
 
+import org.apache.atlas.TestModules;
 import org.apache.atlas.discovery.EntityDiscoveryService;
 import org.apache.atlas.exception.AtlasBaseException;
+import org.apache.atlas.model.instance.AtlasEntity;
 import org.apache.atlas.model.typedef.AtlasEntityDef;
+import org.apache.atlas.repository.store.graph.AtlasEntityStore;
+import org.apache.atlas.type.AtlasType;
 import org.apache.atlas.type.AtlasTypeRegistry;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.powermock.reflect.Whitebox;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
+
+import javax.inject.Inject;
+import java.io.FileReader;
+import java.io.IOException;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
+@Guice(modules = TestModules.TestOnlyModule.class)
 public class EntityDiscoveryServiceTest {
 
     private final String TEST_TYPE                = "test";
@@ -46,6 +57,11 @@ public class EntityDiscoveryServiceTest {
     AtlasEntityDef typeWithSubTypes = null;
 
     private final int maxTypesCountInIdxQuery = 10;
+
+    @Inject
+    EntityDiscoveryService discoveryService;
+    @Inject
+    AtlasEntityStore entityStore;
 
 
     @BeforeClass
@@ -104,6 +120,20 @@ public class EntityDiscoveryServiceTest {
         assertTrue(s.contains(TEST_TYPE3));
         assertTrue(s.endsWith(")"));
     }
+
+    @Test
+    public void testForTypename() throws IOException {
+        char[] jsonChars = new char[0];
+        IOUtils.read(new FileReader("/Users/anaik/Hortonworks/atlas/json/hive_table.json"), jsonChars);
+        AtlasEntity.AtlasEntitiesWithExtInfo extInfo = AtlasType.fromJson(new String(jsonChars), AtlasEntity.AtlasEntitiesWithExtInfo.class);
+        assertNotNull(extInfo);
+    }
+
+    @Test
+    public void testForTag() {}
+
+    @Test
+    public void testForTagAndType() {}
 
     @Test
     public void getSubTypeForTypeWithSubTypes_ReturnsEmptyString() throws Exception {
