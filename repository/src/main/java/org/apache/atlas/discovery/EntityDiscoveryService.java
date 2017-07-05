@@ -20,7 +20,9 @@ package org.apache.atlas.discovery;
 import org.apache.atlas.ApplicationProperties;
 import org.apache.atlas.AtlasConfiguration;
 import org.apache.atlas.AtlasErrorCode;
+import org.apache.atlas.AtlasException;
 import org.apache.atlas.annotation.GraphTransaction;
+import org.apache.atlas.discovery.SearchPipeline.PipelineContext;
 import org.apache.atlas.discovery.graph.DefaultGraphPersistenceStrategy;
 import org.apache.atlas.exception.AtlasBaseException;
 import org.apache.atlas.model.discovery.AtlasSearchResult;
@@ -29,7 +31,6 @@ import org.apache.atlas.model.discovery.AtlasSearchResult.AtlasQueryType;
 import org.apache.atlas.model.discovery.AtlasSearchResult.AttributeSearchResult;
 import org.apache.atlas.model.discovery.SearchParameters;
 import org.apache.atlas.model.instance.AtlasEntity.Status;
-import org.apache.atlas.AtlasException;
 import org.apache.atlas.model.instance.AtlasEntityHeader;
 import org.apache.atlas.query.Expressions.AliasExpression;
 import org.apache.atlas.query.Expressions.Expression;
@@ -42,6 +43,7 @@ import org.apache.atlas.query.QueryProcessor;
 import org.apache.atlas.query.SelectExpressionHelper;
 import org.apache.atlas.repository.Constants;
 import org.apache.atlas.repository.MetadataRepository;
+import org.apache.atlas.repository.graph.GraphBackedSearchIndexer;
 import org.apache.atlas.repository.graph.GraphHelper;
 import org.apache.atlas.repository.graphdb.AtlasGraph;
 import org.apache.atlas.repository.graphdb.AtlasIndexQuery;
@@ -88,6 +90,7 @@ public class EntityDiscoveryService implements AtlasDiscoveryService {
     private final EntityGraphRetriever            entityRetriever;
     private final AtlasGremlinQueryProvider       gremlinQueryProvider;
     private final AtlasTypeRegistry               typeRegistry;
+    private final GraphBackedSearchIndexer        indexer;
     private final SearchPipeline                  searchPipeline;
     private final int                             maxResultSetSize;
     private final int                             maxTypesCountInIdxQuery;
@@ -95,10 +98,11 @@ public class EntityDiscoveryService implements AtlasDiscoveryService {
 
     @Inject
     EntityDiscoveryService(MetadataRepository metadataRepository, AtlasTypeRegistry typeRegistry,
-                           AtlasGraph graph, SearchPipeline searchPipeline) throws AtlasException {
+                           AtlasGraph graph, GraphBackedSearchIndexer indexer, SearchPipeline searchPipeline) throws AtlasException {
         this.graph                    = graph;
         this.graphPersistenceStrategy = new DefaultGraphPersistenceStrategy(metadataRepository);
         this.entityRetriever          = new EntityGraphRetriever(typeRegistry);
+        this.indexer                  = indexer;
         this.gremlinQueryProvider     = AtlasGremlinQueryProvider.INSTANCE;
         this.typeRegistry             = typeRegistry;
         this.searchPipeline           = searchPipeline;
@@ -404,13 +408,27 @@ public class EntityDiscoveryService implements AtlasDiscoveryService {
 
     @Override
     @GraphTransaction
-    public AtlasSearchResult searchUsingBasicQuery(SearchParameters searchParameters) throws AtlasBaseException {
+    public AtlasSearchResult searchWithParameters(SearchParameters searchParameters) throws AtlasBaseException {
         AtlasSearchResult ret = new AtlasSearchResult(searchParameters);
 
-        List<AtlasVertex> resultList = searchPipeline.run(searchParameters);
+        AtlasEntityType         entityType = typeRegistry.getEntityTypeByName(searchParameters.getTypeName());
+        AtlasClassificationType classificationType = typeRegistry.getClassificationTypeByName(searchParameters.getClassification());
+        PipelineContext         context    = new PipelineContext(searchParameters, entityType, classificationType, indexer.getVertexIndexKeys());
+
+        List<AtlasVertex> resultList = searchPipeline.run(context);
+
+        // By default any attribute that shows up in the search parameter should be sent back in the response
+        // If additional values are requested then the entityAttributes will be a superset of the all search attributes
+        // and the explicitly requested attribute(s)
+        Set<String> entityAttributes = context.getEntitySearchAttribute();
+
+        if (CollectionUtils.isNotEmpty(entityAttributes) && CollectionUtils.isNotEmpty(searchParameters.getAttributes())) {
+            // Create a superset of all attributes
+            entityAttributes.addAll(searchParameters.getAttributes());
+        }
 
         for (AtlasVertex atlasVertex : resultList) {
-            AtlasEntityHeader entity = entityRetriever.toAtlasEntityHeader(atlasVertex, searchParameters.getAttributes());
+            AtlasEntityHeader entity = entityRetriever.toAtlasEntityHeader(atlasVertex, entityAttributes);
 
             ret.addEntity(entity);
         }
