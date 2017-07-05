@@ -63,7 +63,7 @@ public class SolrStep implements PipelineStep {
         operatorMap.put(Operator.GT,"v.\"%s\": {%s TO *]");
         operatorMap.put(Operator.LTE,"v.\"%s\": [* TO %s]");
         operatorMap.put(Operator.GTE,"v.\"%s\": [%s TO *]");
-        operatorMap.put(Operator.EQ,"v.\"%s\": %s");
+        operatorMap.put(Operator.EQ,"v.\"%s\": \"%s\"");
         operatorMap.put(Operator.NEQ,"v.\"%s\": (NOT %s)");
         operatorMap.put(Operator.IN, "v.\"%s\": (%s)");
         operatorMap.put(Operator.LIKE, "v.\"%s\": (%s)");
