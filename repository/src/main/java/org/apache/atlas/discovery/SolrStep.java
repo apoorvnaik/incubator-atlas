@@ -64,7 +64,7 @@ public class SolrStep implements PipelineStep {
         operatorMap.put(Operator.LTE,"v.\"%s\": [* TO %s]");
         operatorMap.put(Operator.GTE,"v.\"%s\": [%s TO *]");
         operatorMap.put(Operator.EQ,"v.\"%s\": \"%s\"");
-        operatorMap.put(Operator.NEQ,"v.\"%s\": (NOT %s)");
+        operatorMap.put(Operator.NEQ,"v.\"%s\": (NOT \"%s\")");
         operatorMap.put(Operator.IN, "v.\"%s\": (%s)");
         operatorMap.put(Operator.LIKE, "v.\"%s\": (%s)");
         operatorMap.put(Operator.STARTS_WITH, "v.\"%s\": (%s*)");
@@ -246,43 +246,95 @@ public class SolrStep implements PipelineStep {
     private String toSolrExpression(AtlasStructType type, String attrName, Operator op, String attrVal, PipelineContext context) {
         String ret = EMPTY_STRING;
 
-        try {
-            String    indexKey      = type.getQualifiedAttributeName(attrName);
-            AtlasType attributeType = type.getAttributeType(attrName);
+        PipelineContext.ReferredEntityContext referredEntityContext = context.getReferredEntityContext();
+        if (!referredEntityContext.isReferredEntityAttribute(attrName)) {
+            try {
+                String    indexKey      = type.getQualifiedAttributeName(attrName);
+                AtlasType attributeType = type.getAttributeType(attrName);
 
-            switch (context.getIndexResultType()) {
-                case TAG:
-                    context.addTagSearchAttribute(indexKey);
-                    break;
+                switch (context.getIndexResultType()) {
+                    case TAG:
+                        context.addTagSearchAttribute(indexKey);
+                        break;
 
-                case ENTITY:
-                    context.addEntitySearchAttribute(indexKey);
-                    break;
+                    case ENTITY:
+                        context.addEntitySearchAttribute(indexKey);
+                        break;
 
-                default:
-                    // Do nothing
-            }
-
-            if (attributeType != null && AtlasTypeUtil.isBuiltInType(attributeType.getTypeName()) && context.getIndexedKeys().contains(indexKey)) {
-                if (operatorMap.get(op) != null) {
-                    // If there's a chance of multi-value then we need some additional processing here
-                    switch (context.getIndexResultType()) {
-                        case TAG:
-                            context.addProcessedTagAttribute(indexKey);
-                            break;
-
-                        case ENTITY:
-                            context.addProcessedEntityAttribute(indexKey);
-                            break;
-                    }
-
-                    ret = String.format(operatorMap.get(op), indexKey, attrVal);
+                    default:
+                        // Do nothing
                 }
+
+                if (attributeType != null && AtlasTypeUtil.isBuiltInType(attributeType.getTypeName()) && context.getIndexedKeys().contains(indexKey)) {
+                    if (operatorMap.get(op) != null) {
+                        // If there's a chance of multi-value then we need some additional processing here
+                        switch (context.getIndexResultType()) {
+                            case TAG:
+                                context.addProcessedTagAttribute(indexKey);
+                                break;
+
+                            case ENTITY:
+                                context.addProcessedEntityAttribute(indexKey);
+                                break;
+                        }
+
+                        switch (op) {
+                            // REGEX patterns need special treatment
+                            case STARTS_WITH:
+                                ret = getStartsWithExpr(indexKey, attrVal);
+                                break;
+                            case ENDS_WITH:
+                                ret = getEndsWithExpr(indexKey, attrVal);
+                                break;
+                            case CONTAINS:
+                                ret = getContainsExpr(indexKey, attrVal);
+                                break;
+                            default:
+                                ret = String.format(operatorMap.get(op), indexKey, attrVal);
+                        }
+                    }
+                }
+            } catch (AtlasBaseException ex) {
+                LOG.warn(ex.getMessage());
             }
-        } catch (AtlasBaseException ex) {
-            LOG.warn(ex.getMessage());
+        } else {
+            LOG.warn("Referred attribute {} encountered during Solr search, results might be inaccurate", attrName);
         }
 
         return ret;
+    }
+
+    private String vertexPropertyString(String indexKey) {
+        return "v.\"" + indexKey + "\":";
+    }
+
+    private String getStartsWithExpr(String indexKey, String attrVal) {
+        String expr;
+        if (attrVal.startsWith("/") && attrVal.endsWith("/")) {
+            expr = attrVal.substring(0, attrVal.length() - 1) + ".*/";
+        } else {
+            expr = String.format(operatorMap.get(Operator.STARTS_WITH), indexKey, attrVal);
+        }
+        return vertexPropertyString(indexKey) + expr;
+    }
+
+    private String getEndsWithExpr(String indexKey, String attrVal) {
+        String expr;
+        if (attrVal.startsWith("/") && attrVal.endsWith("/")) {
+            expr = "/.*" + attrVal.substring(1, attrVal.length() - 1);
+        } else {
+            expr = String.format(operatorMap.get(Operator.ENDS_WITH), indexKey, attrVal);
+        }
+        return vertexPropertyString(indexKey) + expr;
+    }
+
+    private String getContainsExpr(String indexKey, String attrVal) {
+        String expr;
+        if (attrVal.startsWith("/") && attrVal.endsWith("/")) {
+            expr = "/.*" + attrVal.substring(1, attrVal.length() - 2) + ".*/";
+        } else {
+            expr = String.format(operatorMap.get(Operator.CONTAINS), indexKey, attrVal);
+        }
+        return vertexPropertyString(indexKey) + expr;
     }
 }

@@ -30,6 +30,7 @@ import org.apache.atlas.repository.graphdb.AtlasVertex;
 import org.apache.atlas.type.AtlasClassificationType;
 import org.apache.atlas.type.AtlasEntityType;
 import org.apache.atlas.type.AtlasStructType;
+import org.apache.atlas.type.AtlasType;
 import org.apache.atlas.util.SearchTracker;
 import org.apache.atlas.utils.AtlasPerfTracer;
 import org.apache.commons.collections.CollectionUtils;
@@ -49,6 +50,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import static org.apache.atlas.discovery.SearchPipeline.Util.isReferredEntityAttr;
 
 @Component
 public class SearchPipeline {
@@ -310,7 +313,7 @@ public class SearchPipeline {
 
                 gremlinCount++;
             } else {
-                if (hasNonIndexedAttrViolation(classificationType, context.getIndexedKeys(), searchParameters.getTagFilters())) {
+                if (hasNonIndexedAttrViolation(classificationType, context, searchParameters.getTagFilters())) {
                     if (LOG.isDebugEnabled()) {
                         LOG.debug("Tag filters not suitable for Solr search. Gremlin will be used to execute the search");
                     }
@@ -338,7 +341,7 @@ public class SearchPipeline {
 
                 gremlinCount++;
             } else {
-                if (hasNonIndexedAttrViolation(entityType, context.getIndexedKeys(), searchParameters.getEntityFilters())) {
+                if (hasNonIndexedAttrViolation(entityType, context, searchParameters.getEntityFilters())) {
                     if (LOG.isDebugEnabled()) {
                         LOG.debug("Entity filters not suitable for Solr search. Gremlin will be used to execute the search");
                     }
@@ -366,17 +369,17 @@ public class SearchPipeline {
     // A violation (here) is defined as presence of non-indexed attribute within any OR clause nested under an AND clause
     // the reason being that the index would not be able to process the nested OR attribute which might result in
     // exclusion of valid result (vertex)
-    private boolean hasNonIndexedAttrViolation(AtlasStructType structType, Set<String> indexKeys, FilterCriteria filterCriteria) {
-        return hasNonIndexedAttrViolation(structType, indexKeys, filterCriteria, false);
+    private boolean hasNonIndexedAttrViolation(AtlasStructType structType, PipelineContext context, FilterCriteria filterCriteria) {
+        return hasNonIndexedAttrViolation(structType, context, filterCriteria, false);
     }
 
-    private boolean hasNonIndexedAttrViolation(AtlasStructType structType, Set<String> indexKeys, FilterCriteria filterCriteria, boolean enclosedInOrCondition) {
+    private boolean hasNonIndexedAttrViolation(AtlasStructType structType, PipelineContext context, FilterCriteria filterCriteria, boolean enclosedInOrCondition) {
         if (filterCriteria == null) {
             return false;
         }
 
-        boolean              ret             = false;
-        Condition            filterCondition = filterCriteria.getCondition();
+        boolean ret             = false;
+        Condition filterCondition = filterCriteria.getCondition();
         List<FilterCriteria> criterion       = filterCriteria.getCriterion();
 
         if (filterCondition != null && CollectionUtils.isNotEmpty(criterion)) {
@@ -386,26 +389,39 @@ public class SearchPipeline {
 
             // If we have nested criterion let's find any nested ORs with non-indexed attr
             for (FilterCriteria criteria : criterion) {
-                ret |= hasNonIndexedAttrViolation(structType, indexKeys, criteria, enclosedInOrCondition);
+                ret |= hasNonIndexedAttrViolation(structType, context, criteria, enclosedInOrCondition);
 
                 if (ret) {
                     break;
                 }
             }
         } else if (StringUtils.isNotEmpty(filterCriteria.getAttributeName())) {
-            // If attribute qualified name doesn't exist in the vertex index we potentially might have a problem
-            try {
-                String qualifiedAttributeName = structType.getQualifiedAttributeName(filterCriteria.getAttributeName());
-
-                ret = CollectionUtils.isEmpty(indexKeys) || !indexKeys.contains(qualifiedAttributeName);
-
-                if (ret) {
-                    LOG.warn("search includes non-indexed attribute '{}'; might cause poor performance", qualifiedAttributeName);
+            String attributeName = filterCriteria.getAttributeName();
+            if (isReferredEntityAttr(structType, attributeName)) {
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Ignoring the referred entity attribute");
                 }
-            } catch (AtlasBaseException e) {
-                LOG.warn(e.getMessage());
-
+                String[] attrParts = attributeName.split("\\.");
+                // TODO: Throw exception in case there is multi-level attribute reference
+                // Gremlin step can use this to make further decisions
+                context.addReferredEntityAttr(attrParts[0], attrParts[1], attributeName);
                 ret = true;
+            } else {
+                // If attribute qualified name doesn't exist in the vertex index we potentially might have a problem
+                try {
+                    String qualifiedAttributeName = structType.getQualifiedAttributeName(attributeName);
+
+                    Set<String> indexedKeys = context.getIndexedKeys();
+                    ret = CollectionUtils.isEmpty(indexedKeys) || !indexedKeys.contains(qualifiedAttributeName);
+
+                    if (ret) {
+                        LOG.warn("search includes non-indexed attribute '{}'; might cause poor performance", qualifiedAttributeName);
+                    }
+                } catch (AtlasBaseException e) {
+                    LOG.warn(e.getMessage());
+
+                    ret = true;
+                }
             }
         }
 
@@ -419,7 +435,6 @@ public class SearchPipeline {
     }
 
     public static class PipelineContext {
-        // TODO: See if anything can be cached in the context
 
         private final SearchParameters        searchParameters;
         private final AtlasEntityType         entityType;
@@ -432,8 +447,12 @@ public class SearchPipeline {
         private int     maxLimit;
 
         // Continuous processing stuff
-        private Set<String> tagSearchAttributes       = new HashSet<>();
-        private Set<String> entitySearchAttributes    = new HashSet<>();
+        private Set<String> tagSearchAttributes                             = new HashSet<>();
+        private Set<String> entitySearchAttributes                          = new HashSet<>();
+
+        private ReferredEntityContext referredEntityContext = new ReferredEntityContext();
+
+        // Solr
         private Set<String> tagAttrProcessedBySolr    = new HashSet<>();
         private Set<String> entityAttrProcessedBySolr = new HashSet<>();
 
@@ -589,6 +608,14 @@ public class SearchPipeline {
             return maxLimit;
         }
 
+        public ReferredEntityContext getReferredEntityContext() {
+            return referredEntityContext;
+        }
+
+        public void addReferredEntityAttr(String entity, String attr, String qualifiedAttr) {
+            referredEntityContext.addReferredAttr(entity, attr, qualifiedAttr);
+        }
+
         @Override
         public String toString() {
             return new ToStringBuilder(this)
@@ -605,6 +632,86 @@ public class SearchPipeline {
                     .append("cachedIndexQueries", cachedIndexQueries)
                     .append("cachedGraphQueries", cachedGraphQueries)
                     .toString();
+        }
+
+        class ReferredEntityContext {
+            private Set<String> referredEntitySearchAttributes                  = new HashSet<>();
+            private Map<String, List<String>> referredEntityAttributes          = new HashMap<>();
+            private Map<String, String> qualifiedAttrToEntityMap                = new HashMap<>();
+
+            public void addReferredAttr(String entity, String attr, String qualifiedName) {
+                List<String> entityAttributes = referredEntityAttributes.get(entity);
+                if (entityAttributes == null) {
+                    entityAttributes = new ArrayList<>();
+                }
+                entityAttributes.add(attr);
+                referredEntityAttributes.put(entity, entityAttributes);
+                referredEntitySearchAttributes.add(qualifiedName);
+                qualifiedAttrToEntityMap.put(qualifiedName, entity);
+            }
+
+            public boolean isReferredEntityAttribute(String qualifiedAttrName) {
+                return CollectionUtils.isNotEmpty(referredEntitySearchAttributes)
+                        && referredEntitySearchAttributes.contains(qualifiedAttrName);
+            }
+
+            public Set<String> getReferredAttributes() {
+                return referredEntitySearchAttributes;
+            }
+
+            public List<String> getReferredAttributes(String entity) {
+                return referredEntityAttributes.get(entity);
+            }
+
+            public Set<String> getReferredEntities() {
+                return referredEntityAttributes.keySet();
+            }
+
+            public String getEntityForAttr(String qualifiedAttr) {
+                return qualifiedAttrToEntityMap.get(qualifiedAttr);
+            }
+        }
+    }
+
+    // Basic assumption is that there will only be one level of reference, one vertex hop
+    public static class Util {
+        public static boolean isReferredEntityAttr(AtlasStructType structType, String attributeName) {
+            boolean ret = false;
+            if (attributeName.contains(".")) {
+                String[] attrParts = attributeName.split("\\.");
+
+                String referredEntity = attrParts[0];
+                String referredAttribute = attrParts[1];
+
+                AtlasType attributeType = structType.getAttributeType(referredEntity.toLowerCase());
+                if (attributeType != null) {
+                    attributeType = structType.getAttributeType(referredEntity);
+                }
+                ret = isReferredAttribute(referredAttribute, attributeType);
+            }
+
+            return ret;
+        }
+
+        public static String toNonQualifiedName(String attrName) {
+            String ret;
+            if (attrName.contains(".")) {
+                String[] attributeParts = attrName.split("\\.");
+                ret = attributeParts[attributeParts.length - 1];
+            } else {
+                ret = attrName;
+            }
+            return ret;
+        }
+
+        private static boolean isReferredAttribute(String attrName, AtlasType attributeType) {
+            boolean ret = false;
+            if (attributeType != null && attributeType instanceof AtlasStructType) {
+                AtlasStructType atlasStructType = (AtlasStructType) attributeType;
+                AtlasStructType.AtlasAttribute referredAttribute = atlasStructType.getAttribute(attrName);
+                ret = referredAttribute != null;
+            }
+            return ret;
         }
     }
 }

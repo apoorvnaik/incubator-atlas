@@ -33,7 +33,6 @@ import org.apache.atlas.repository.store.graph.v1.AtlasGraphUtilsV1;
 import org.apache.atlas.type.AtlasClassificationType;
 import org.apache.atlas.type.AtlasEntityType;
 import org.apache.atlas.type.AtlasStructType;
-import org.apache.atlas.type.AtlasTypeRegistry;
 import org.apache.atlas.utils.AtlasPerfTracer;
 import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
@@ -60,14 +59,12 @@ public class GremlinStep implements PipelineStep {
     private static final Logger PERF_LOG = AtlasPerfTracer.getPerfLogger("GremlinSearchStep");
 
     private final AtlasGraph        graph;
-    private final AtlasTypeRegistry typeRegistry;
 
     enum GremlinFilterQueryType { TAG, ENTITY }
 
     @Inject
-    public GremlinStep(AtlasGraph graph, AtlasTypeRegistry typeRegistry) {
+    public GremlinStep(AtlasGraph graph) {
         this.graph        = graph;
-        this.typeRegistry = typeRegistry;
     }
 
     @Override
@@ -317,16 +314,25 @@ public class GremlinStep implements PipelineStep {
             String   attrValue = criteria.getAttributeValue();
             Operator operator  = criteria.getOperator();
 
+            PipelineContext.ReferredEntityContext referredEntityContext = context.getReferredEntityContext();
             try {
+//                if (referredEntityContext.isReferredEntityAttribute(attrName)) {
+//                     Vertices with the referred entity edge
+//                    processReferredEntity(query, context, attrName, referredEntityContext);
+//                } else {
+//
+//                }
                 // If attribute belongs to supertype then adjust the name accordingly
-                final String  qualifiedAttributeName;
+                final String  qualifiedAttributeName = type.getQualifiedAttributeName(attrName);
                 final boolean attrProcessed;
 
+                // STOPSHIP: 7/6/17 The problem here is that the referenced entity attribute is encountered as Xx.xx
+                // which causes failure in the getAttribute the code needs to change in order to deal with the referenced attributes
+                // context also needs to track the referenced entity attributes
+
                 if (queryType == GremlinFilterQueryType.TAG) {
-                    qualifiedAttributeName = type.getQualifiedAttributeName(attrName);
                     attrProcessed          = context.hasProcessedTagAttribute(qualifiedAttributeName);
                 } else {
-                    qualifiedAttributeName = type.getQualifiedAttributeName(attrName);
                     attrProcessed          = context.hasProcessedEntityAttribute(qualifiedAttributeName);
                 }
 
@@ -376,6 +382,21 @@ public class GremlinStep implements PipelineStep {
 
         return query;
     }
+
+//    private void processReferredEntity(AtlasGraphQuery query, PipelineContext context, String attrName, PipelineContext.ReferredEntityContext referredEntityContext) throws AtlasBaseException {
+//        List<String> vertexGUIDs = new ArrayList<>();
+//        Iterable<AtlasVertex> vertices = graph.query()
+//                .addConditionsFrom(query).vertices(context.getCurrentOffset(), context.getMaxLimit());
+//        for (AtlasVertex vertex : vertices) {
+//            Iterable<AtlasEdge> edges = vertex.getEdges(AtlasEdgeDirection.OUT, AtlasGraphUtilsV1.getAttributeEdgeLabel(context.getEntityType(), referredEntityContext.getEntityForAttr(attrName)));
+//            for (AtlasEdge edge : edges) {
+//                AtlasVertex referredEntityVertex = edge.getInVertex();
+//                String vertexProperty = AtlasGraphUtilsV1.getProperty(referredEntityVertex, attrName, String.class);
+//                if (StringUtils.equals())
+//
+//            }
+//        }
+//    }
 
     private String getContainsRegex(String attributeValue) {
         return ".*" + attributeValue + ".*";
