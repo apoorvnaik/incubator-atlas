@@ -146,7 +146,7 @@ public class TestModules {
             bind(SearchPipeline.class).asEagerSingleton();
             bind(SearchTracker.class).asEagerSingleton();
             bind(SolrStep.class).asEagerSingleton();
-            bind(GremlinStep.class).asEagerSingleton();
+            bind(AtlasGraphStep.class).asEagerSingleton();
 
             bind(AtlasEntityStore.class).to(AtlasEntityStoreV1.class);
             bind(AtlasRelationshipStore.class).to(AtlasRelationshipStoreV1.class);

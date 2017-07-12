@@ -39,6 +39,7 @@ import org.apache.atlas.repository.graphdb.AtlasEdge;
 import org.apache.atlas.repository.graphdb.AtlasGraph;
 import org.apache.atlas.repository.graphdb.AtlasGraphManagement;
 import org.apache.atlas.repository.graphdb.AtlasGraphQuery;
+import org.apache.atlas.repository.graphdb.AtlasGraphTraversal;
 import org.apache.atlas.repository.graphdb.AtlasIndexQuery;
 import org.apache.atlas.repository.graphdb.AtlasSchemaViolationException;
 import org.apache.atlas.repository.graphdb.AtlasVertex;
@@ -111,6 +112,11 @@ public class Titan0Graph implements AtlasGraph<Titan0Vertex, Titan0Edge> {
     public AtlasGraphQuery<Titan0Vertex, Titan0Edge> query() {
 
         return new Titan0GraphQuery(this);
+    }
+
+    @Override
+    public AtlasGraphTraversal traversal() {
+        return new Titan0GraphTraversal(this);
     }
 
     @Override

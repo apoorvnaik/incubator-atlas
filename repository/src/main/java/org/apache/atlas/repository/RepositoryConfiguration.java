@@ -17,19 +17,12 @@
  */
 package org.apache.atlas.repository;
 
-import org.apache.atlas.repository.graphdb.GraphDatabase;
 import org.apache.atlas.typesystem.types.TypeSystem;
-import org.apache.atlas.util.AtlasRepositoryConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class RepositoryConfiguration {
-    @Bean
-    public GraphDatabase getGraphDatabase() throws IllegalAccessException, InstantiationException {
-        return AtlasRepositoryConfiguration.getGraphDatabaseImpl().newInstance();
-    }
-
     @Bean
     public TypeSystem getTypeSystem() {
         return TypeSystem.getInstance();

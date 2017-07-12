@@ -25,6 +25,7 @@ import org.apache.atlas.repository.Constants;
 import org.apache.atlas.repository.graphdb.AtlasEdge;
 import org.apache.atlas.repository.graphdb.AtlasEdgeDirection;
 import org.apache.atlas.repository.graphdb.AtlasGraphQuery;
+import org.apache.atlas.repository.graphdb.AtlasGraphTraversal;
 import org.apache.atlas.repository.graphdb.AtlasIndexQuery;
 import org.apache.atlas.repository.graphdb.AtlasVertex;
 import org.apache.atlas.type.AtlasClassificationType;
@@ -37,6 +38,7 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.builder.ToStringBuilder;
+import org.apache.commons.lang3.RandomUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -62,14 +64,17 @@ public class SearchPipeline {
 
     enum IndexResultType { TAG, ENTITY, TEXT }
 
-    private final SolrStep                 solrStep;
-    private final GremlinStep              gremlinStep;
-    private final SearchTracker            searchTracker;
-    private final Configuration            atlasConfiguration;
+    private final SolrStep                  solrStep;
+    private final AtlasGraphStep            atlasGraphStep;
+    private final GremlinStep               gremlinStep;
+    private final SearchTracker             searchTracker;
+    private final Configuration             atlasConfiguration;
 
     @Inject
-    public SearchPipeline(SolrStep solrStep, GremlinStep gremlinStep, SearchTracker searchTracker, Configuration atlasConfiguration) {
+    public SearchPipeline(SolrStep solrStep, AtlasGraphStep atlasGraphStep, GremlinStep gremlinStep,
+                          SearchTracker searchTracker, Configuration atlasConfiguration) {
         this.solrStep           = solrStep;
+        this.atlasGraphStep     = atlasGraphStep;
         this.gremlinStep        = gremlinStep;
         this.searchTracker      = searchTracker;
         this.atlasConfiguration = atlasConfiguration;
@@ -177,7 +182,13 @@ public class SearchPipeline {
                 break;
             }
 
-            gremlinStep.execute(context);
+            if (RandomUtils.nextDouble(0.0, 1.0) < 0.5) {
+                LOG.info("Using AtlasGraphStep");
+                atlasGraphStep.execute(context);
+            } else {
+                LOG.info("Using GremlinStep");
+                gremlinStep.execute(context);
+            }
 
             List<AtlasVertex> stepResults = getGremlinResults(context);
 
@@ -230,7 +241,7 @@ public class SearchPipeline {
             }
 
             // Attributes partially processed by Solr, use gremlin to process remaining attribute(s)
-            gremlinStep.execute(context);
+            atlasGraphStep.execute(context);
 
             context.incrementSearchRound();
 
@@ -461,8 +472,9 @@ public class SearchPipeline {
         private Iterator<AtlasIndexQuery.Result> indexResultsIterator;
         private Iterator<AtlasVertex>            gremlinResultIterator;
 
-        private Map<String, AtlasIndexQuery> cachedIndexQueries = new HashMap<>();
-        private Map<String, AtlasGraphQuery> cachedGraphQueries = new HashMap<>();
+        private Map<String, AtlasIndexQuery> cachedIndexQueries       = new HashMap<>();
+        private Map<String, AtlasGraphQuery> cachedGraphQueries       = new HashMap<>();
+        private Map<String, AtlasGraphTraversal> cachedGraphTraversal = new HashMap<>();
 
         public PipelineContext(SearchParameters searchParameters, AtlasEntityType entityType, AtlasClassificationType classificationType, Set<String> indexedKeys) {
             this.searchParameters   = searchParameters;
@@ -588,12 +600,20 @@ public class SearchPipeline {
             cachedIndexQueries.put(name, indexQuery);
         }
 
+        public void cacheGraphTraversal(String name, AtlasGraphTraversal graphTraversal) {
+            cachedGraphTraversal.put(name, graphTraversal);
+        }
+
         public AtlasIndexQuery getIndexQuery(String name){
             return cachedIndexQueries.get(name);
         }
 
         public AtlasGraphQuery getGraphQuery(String name) {
             return cachedGraphQueries.get(name);
+        }
+
+        public AtlasGraphTraversal getGraphTraversal(String name) {
+            return cachedGraphTraversal.get(name);
         }
 
         public IndexResultType getIndexResultType() {

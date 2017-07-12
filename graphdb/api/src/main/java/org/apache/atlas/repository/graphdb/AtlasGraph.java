@@ -146,6 +146,12 @@ public interface AtlasGraph<V, E> {
     AtlasGraphQuery<V, E> query();
 
     /**
+     * Start a new graph traversal
+     * @return
+     */
+    AtlasGraphTraversal traversal();
+
+    /**
      * Creates an index query.
      *
      * @param indexName index name

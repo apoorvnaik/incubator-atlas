@@ -435,7 +435,7 @@ public class AdminResource {
     @Produces(Servlets.JSON_MEDIA_TYPE)
     public boolean terminateActiveSearch(@PathParam("id") String searchId) {
         SearchPipeline.PipelineContext terminate = activeSearches.terminate(searchId);
-        return null != terminate;
+        return terminate != null;
     }
 
     private String getEditableEntityTypes(Configuration config) {

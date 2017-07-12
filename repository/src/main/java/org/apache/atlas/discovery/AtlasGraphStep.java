@@ -25,9 +25,7 @@ import org.apache.atlas.repository.Constants;
 import org.apache.atlas.repository.graphdb.AtlasEdge;
 import org.apache.atlas.repository.graphdb.AtlasEdgeDirection;
 import org.apache.atlas.repository.graphdb.AtlasGraph;
-import org.apache.atlas.repository.graphdb.AtlasGraphTraversal;
-import org.apache.atlas.repository.graphdb.AtlasGraphTraversal.ComparisonOp;
-import org.apache.atlas.repository.graphdb.AtlasGraphTraversal.PatternOp;
+import org.apache.atlas.repository.graphdb.AtlasGraphQuery;
 import org.apache.atlas.repository.graphdb.AtlasIndexQuery;
 import org.apache.atlas.repository.graphdb.AtlasVertex;
 import org.apache.atlas.repository.store.graph.v1.AtlasGraphUtilsV1;
@@ -44,24 +42,28 @@ import javax.inject.Inject;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 
 import static org.apache.atlas.discovery.SearchPipeline.IndexResultType;
 import static org.apache.atlas.discovery.SearchPipeline.PipelineContext;
 import static org.apache.atlas.discovery.SearchPipeline.PipelineStep;
+import static org.apache.atlas.repository.graphdb.AtlasGraphQuery.ComparisionOperator;
+import static org.apache.atlas.repository.graphdb.AtlasGraphQuery.MatchingOperator;
 
 @Component
-public class GremlinStep implements PipelineStep {
-    private static final Logger LOG      = LoggerFactory.getLogger(GremlinStep.class);
-    private static final Logger PERF_LOG = AtlasPerfTracer.getPerfLogger("GremlinStep");
+public class AtlasGraphStep implements PipelineStep {
+    private static final Logger LOG      = LoggerFactory.getLogger(AtlasGraphStep.class);
+    private static final Logger PERF_LOG = AtlasPerfTracer.getPerfLogger("AtlasGraphStep");
 
     private final AtlasGraph graph;
 
     enum GremlinFilterQueryType { TAG, ENTITY }
 
     @Inject
-    public GremlinStep(AtlasGraph graph) {
-        this.graph = graph;
+    public AtlasGraphStep(AtlasGraph graph) {
+        this.graph        = graph;
     }
 
     @Override
@@ -157,45 +159,46 @@ public class GremlinStep implements PipelineStep {
         AtlasEntityType  entityType       = context.getEntityType();
 
         if (entityType != null) {
-            AtlasGraphTraversal entityFilterTraversal = context.getGraphTraversal("ENTITY_FILTER");
+            AtlasGraphQuery entityFilterQuery = context.getGraphQuery("ENTITY_FILTER");
 
-            if (entityFilterTraversal == null) {
-                entityFilterTraversal = graph.traversal()
-                        .V().has(Constants.TYPE_NAME_PROPERTY_KEY, ComparisonOp.IN, entityType.getTypeAndAllSubTypes());
+            if (entityFilterQuery == null) {
+                entityFilterQuery = graph.query().in(Constants.TYPE_NAME_PROPERTY_KEY, entityType.getTypeAndAllSubTypes());
 
                 if (searchParameters.getEntityFilters() != null) {
-                    toGremlinTraversal(GremlinFilterQueryType.ENTITY, entityType, searchParameters.getEntityFilters(), entityFilterTraversal, context);
+                    toGremlinFilterQuery(GremlinFilterQueryType.ENTITY, entityType, searchParameters.getEntityFilters(), entityFilterQuery, context);
                 }
 
                 if (searchParameters.getExcludeDeletedEntities()) {
-                    entityFilterTraversal.has(Constants.STATE_PROPERTY_KEY, "ACTIVE");
+                    entityFilterQuery.has(Constants.STATE_PROPERTY_KEY, "ACTIVE");
                 }
 
-                context.cacheGraphTraversal("ENTITY_FILTER", entityFilterTraversal);
+                context.cacheGraphQuery("ENTITY_FILTER", entityFilterQuery);
             }
 
             // Now get all vertices
             if (CollectionUtils.isEmpty(entityGUIDs)) {
-                ret = entityFilterTraversal.range(context.getCurrentOffset(), context.getMaxLimit()).toList().iterator();
+                ret = entityFilterQuery.vertices(context.getCurrentOffset(), context.getMaxLimit()).iterator();
             } else {
-                AtlasGraphTraversal guidQuery = entityFilterTraversal.has(Constants.GUID_PROPERTY_KEY, ComparisonOp.IN, entityGUIDs);
+                AtlasGraphQuery guidQuery = graph.query().in(Constants.GUID_PROPERTY_KEY, entityGUIDs);
 
-                if (entityFilterTraversal != null) {
-                    guidQuery.and(entityFilterTraversal);
+                if (entityFilterQuery != null) {
+                    guidQuery.addConditionsFrom(entityFilterQuery);
                 } else if (searchParameters.getExcludeDeletedEntities()) {
                     guidQuery.has(Constants.STATE_PROPERTY_KEY, "ACTIVE");
                 }
 
-                ret = guidQuery.range(context.getCurrentOffset(), context.getMaxLimit()).toList().iterator();
+                ret = guidQuery.vertices(context.getMaxLimit()).iterator();
             }
         } else if (CollectionUtils.isNotEmpty(entityGUIDs)) {
-            AtlasGraphTraversal guidQuery = graph.traversal().has(Constants.GUID_PROPERTY_KEY, ComparisonOp.IN, entityGUIDs);
+            AtlasGraphQuery guidQuery = graph.query().in(Constants.GUID_PROPERTY_KEY, entityGUIDs);
 
             if (searchParameters.getExcludeDeletedEntities()) {
                 guidQuery.has(Constants.STATE_PROPERTY_KEY, "ACTIVE");
             }
 
-            ret = guidQuery.range(context.getCurrentOffset(), context.getMaxLimit()).toList().iterator();
+            Iterable<AtlasVertex> vertices = guidQuery.vertices(context.getMaxLimit());
+
+            ret = vertices.iterator();
         } else {
             ret = null;
         }
@@ -217,19 +220,19 @@ public class GremlinStep implements PipelineStep {
         AtlasClassificationType classificationType = context.getClassificationType();
 
         if (classificationType != null) {
-            AtlasGraphTraversal tagVertexQuery = context.getGraphTraversal("TAG_VERTEX");
+            AtlasGraphQuery  tagVertexQuery = context.getGraphQuery("TAG_VERTEX");
 
             if (tagVertexQuery == null) {
-                tagVertexQuery = graph.traversal().has(Constants.TYPE_NAME_PROPERTY_KEY, ComparisonOp.IN, classificationType.getTypeAndAllSubTypes());
+                tagVertexQuery = graph.query().in(Constants.TYPE_NAME_PROPERTY_KEY, classificationType.getTypeAndAllSubTypes());
 
                 SearchParameters searchParameters = context.getSearchParameters();
 
                 // Do tag filtering first as it'll return a smaller subset of vertices
                 if (searchParameters.getTagFilters() != null) {
-                    toGremlinTraversal(GremlinFilterQueryType.TAG, classificationType, searchParameters.getTagFilters(), tagVertexQuery, context);
+                    toGremlinFilterQuery(GremlinFilterQueryType.TAG, classificationType, searchParameters.getTagFilters(), tagVertexQuery, context);
                 }
 
-                context.cacheGraphTraversal("TAG_VERTEX", tagVertexQuery);
+                context.cacheGraphQuery("TAG_VERTEX", tagVertexQuery);
             }
 
             if (tagVertexQuery != null) {
@@ -237,7 +240,7 @@ public class GremlinStep implements PipelineStep {
                 // Now get all vertices after adjusting offset for each iteration
                 LOG.debug("Firing TAG query");
 
-                Iterator<AtlasVertex> tagVertexIterator = tagVertexQuery.range(context.getCurrentOffset(), context.getMaxLimit()).toList().iterator();
+                Iterator<AtlasVertex> tagVertexIterator = tagVertexQuery.vertices(context.getCurrentOffset(), context.getMaxLimit()).iterator();
 
                 while (tagVertexIterator.hasNext()) {
                     // Find out which Vertex has this outgoing edge
@@ -284,18 +287,25 @@ public class GremlinStep implements PipelineStep {
         return guids;
     }
 
-    private AtlasGraphTraversal toGremlinTraversal(GremlinFilterQueryType queryType, AtlasStructType type, FilterCriteria criteria,
-                                                   AtlasGraphTraversal traversal, PipelineContext context) {
+    private AtlasGraphQuery toGremlinFilterQuery(GremlinFilterQueryType queryType, AtlasStructType type, FilterCriteria criteria,
+                                                 AtlasGraphQuery query, PipelineContext context) {
         if (criteria.getCondition() != null) {
             if (criteria.getCondition() == Condition.AND) {
                 for (FilterCriteria filterCriteria : criteria.getCriterion()) {
-                    AtlasGraphTraversal nestedTraversal = toGremlinTraversal(queryType, type, filterCriteria, graph.traversal(), context);
-                    traversal.and(nestedTraversal);
+                    AtlasGraphQuery nestedQuery = toGremlinFilterQuery(queryType, type, filterCriteria, graph.query(), context);
+                    query.addConditionsFrom(nestedQuery);
                 }
             } else {
+                List<AtlasGraphQuery> orConditions = new LinkedList<>();
+
                 for (FilterCriteria filterCriteria : criteria.getCriterion()) {
-                    AtlasGraphTraversal nestedTraversal = toGremlinTraversal(queryType, type, filterCriteria, graph.traversal(), context);
-                    traversal.or(graph.traversal().and(nestedTraversal));
+                    AtlasGraphQuery nestedQuery = toGremlinFilterQuery(queryType, type, filterCriteria, graph.query(), context);
+                    // FIXME: Something might not be right here as the queries are getting overwritten sometimes
+                    orConditions.add(graph.query().createChildQuery().addConditionsFrom(nestedQuery));
+                }
+
+                if (!orConditions.isEmpty()) {
+                    query.or(orConditions);
                 }
             }
         } else {
@@ -303,7 +313,14 @@ public class GremlinStep implements PipelineStep {
             String   attrValue = criteria.getAttributeValue();
             SearchParameters.Operator operator  = criteria.getOperator();
 
+            PipelineContext.ReferredEntityContext referredEntityContext = context.getReferredEntityContext();
             try {
+//                if (referredEntityContext.isReferredEntityAttribute(attrName)) {
+//                     Vertices with the referred entity edge
+//                    processReferredEntity(query, context, attrName, referredEntityContext);
+//                } else {
+//
+//                }
                 // If attribute belongs to supertype then adjust the name accordingly
                 final String  qualifiedAttributeName = type.getQualifiedAttributeName(attrName);
                 final boolean attrProcessed;
@@ -322,34 +339,35 @@ public class GremlinStep implements PipelineStep {
                 if (!attrProcessed) {
                     switch (operator) {
                         case LT:
-                            traversal.has(qualifiedAttributeName, ComparisonOp.LT, attrValue);
+                            query.has(qualifiedAttributeName, ComparisionOperator.LESS_THAN, attrValue);
                             break;
                         case LTE:
-                            traversal.has(qualifiedAttributeName, ComparisonOp.LTE, attrValue);
+                            query.has(qualifiedAttributeName, ComparisionOperator.LESS_THAN_EQUAL, attrValue);
                             break;
                         case GT:
-                            traversal.has(qualifiedAttributeName, ComparisonOp.GT, attrValue);
+                            query.has(qualifiedAttributeName, ComparisionOperator.GREATER_THAN, attrValue);
                             break;
                         case GTE:
-                            traversal.has(qualifiedAttributeName, ComparisonOp.GTE, attrValue);
+                            query.has(qualifiedAttributeName, ComparisionOperator.GREATER_THAN_EQUAL, attrValue);
                             break;
                         case EQ:
-                            traversal.has(qualifiedAttributeName, ComparisonOp.EQ, attrValue);
+                            query.has(qualifiedAttributeName, ComparisionOperator.EQUAL, attrValue);
                             break;
                         case NEQ:
-                            traversal.has(qualifiedAttributeName, ComparisonOp.NEQ, attrValue);
+                            query.has(qualifiedAttributeName, ComparisionOperator.NOT_EQUAL, attrValue);
                             break;
                         case LIKE:
-                            traversal.has(qualifiedAttributeName, PatternOp.REGEX, getLikeRegex(attrValue));
+                            // TODO: Maybe we need to validate pattern
+                            query.has(qualifiedAttributeName, MatchingOperator.REGEX, getLikeRegex(attrValue));
                             break;
                         case CONTAINS:
-                            traversal.has(qualifiedAttributeName, PatternOp.REGEX, getContainsRegex(attrValue));
+                            query.has(qualifiedAttributeName, MatchingOperator.REGEX, getContainsRegex(attrValue));
                             break;
                         case STARTS_WITH:
-                            traversal.has(qualifiedAttributeName, PatternOp.PREFIX, attrValue);
+                            query.has(qualifiedAttributeName, MatchingOperator.PREFIX, attrValue);
                             break;
                         case ENDS_WITH:
-                            traversal.has(qualifiedAttributeName, PatternOp.REGEX, getSuffixRegex(attrValue));
+                            query.has(qualifiedAttributeName, MatchingOperator.REGEX, getSuffixRegex(attrValue));
                             break;
                         case IN:
                             LOG.warn("{}: unsupported operator. Ignored", operator);
@@ -357,12 +375,27 @@ public class GremlinStep implements PipelineStep {
                     }
                 }
             } catch (AtlasBaseException e) {
-                LOG.error("toGremlinTraversal(): failed for attrName=" + attrName + "; operator=" + operator + "; attrValue=" + attrValue, e);
+                LOG.error("toGremlinFilterQuery(): failed for attrName=" + attrName + "; operator=" + operator + "; attrValue=" + attrValue, e);
             }
         }
 
-        return traversal;
+        return query;
     }
+
+//    private void processReferredEntity(AtlasGraphQuery query, PipelineContext context, String attrName, PipelineContext.ReferredEntityContext referredEntityContext) throws AtlasBaseException {
+//        List<String> vertexGUIDs = new ArrayList<>();
+//        Iterable<AtlasVertex> vertices = graph.query()
+//                .addConditionsFrom(query).vertices(context.getCurrentOffset(), context.getMaxLimit());
+//        for (AtlasVertex vertex : vertices) {
+//            Iterable<AtlasEdge> edges = vertex.getEdges(AtlasEdgeDirection.OUT, AtlasGraphUtilsV1.getAttributeEdgeLabel(context.getEntityType(), referredEntityContext.getEntityForAttr(attrName)));
+//            for (AtlasEdge edge : edges) {
+//                AtlasVertex referredEntityVertex = edge.getInVertex();
+//                String vertexProperty = AtlasGraphUtilsV1.getProperty(referredEntityVertex, attrName, String.class);
+//                if (StringUtils.equals())
+//
+//            }
+//        }
+//    }
 
     private String getContainsRegex(String attributeValue) {
         return ".*" + attributeValue + ".*";

@@ -18,12 +18,14 @@
 
 package org.apache.atlas.repository.graphdb.titan1;
 
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.util.ArrayList;
-
+import com.thinkaurelius.titan.core.TitanFactory;
+import com.thinkaurelius.titan.core.TitanGraph;
+import com.thinkaurelius.titan.core.schema.TitanManagement;
+import com.thinkaurelius.titan.core.util.TitanCleanup;
+import com.thinkaurelius.titan.graphdb.tinkerpop.TitanIoRegistry;
 import org.apache.atlas.ApplicationProperties;
 import org.apache.atlas.AtlasException;
+import org.apache.atlas.annotation.ConditionalOnAtlasProperty;
 import org.apache.atlas.repository.graphdb.AtlasGraph;
 import org.apache.atlas.repository.graphdb.GraphDatabase;
 import org.apache.atlas.repository.graphdb.titan1.serializer.BigDecimalSerializer;
@@ -32,20 +34,20 @@ import org.apache.atlas.repository.graphdb.titan1.serializer.StringListSerialize
 import org.apache.atlas.repository.graphdb.titan1.serializer.TypeCategorySerializer;
 import org.apache.atlas.typesystem.types.DataTypes.TypeCategory;
 import org.apache.commons.configuration.Configuration;
-import org.apache.tinkerpop.gremlin.groovy.loaders.SugarLoader;
 import org.apache.tinkerpop.gremlin.structure.io.graphson.GraphSONMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
-import com.thinkaurelius.titan.core.TitanFactory;
-import com.thinkaurelius.titan.core.TitanGraph;
-import com.thinkaurelius.titan.core.schema.TitanManagement;
-import com.thinkaurelius.titan.core.util.TitanCleanup;
-import com.thinkaurelius.titan.graphdb.tinkerpop.TitanIoRegistry;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.ArrayList;
 
 /**
  * Default implementation for Graph Provider that doles out Titan Graph.
  */
+@Component
+@ConditionalOnAtlasProperty(property = "atlas.graphdb.backend")
 public class Titan1GraphDatabase implements GraphDatabase<Titan1Vertex, Titan1Edge> {
 
     private static final Logger LOG = LoggerFactory.getLogger(Titan1GraphDatabase.class);

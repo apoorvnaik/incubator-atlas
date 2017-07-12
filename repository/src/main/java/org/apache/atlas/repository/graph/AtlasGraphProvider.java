@@ -33,7 +33,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class AtlasGraphProvider implements IAtlasGraphProvider {
 
-    private static volatile GraphDatabase<?,?> graphDb_;    
+    private static volatile GraphDatabase<?,?> graphDb_;
 
     public static <V, E> AtlasGraph<V, E> getGraphInstance() {
         GraphDatabase<?,?> db = getGraphDatabase();      
@@ -69,5 +69,10 @@ public class AtlasGraphProvider implements IAtlasGraphProvider {
     @Bean
     public AtlasGraph get() throws RepositoryException {
         return getGraphInstance();
+    }
+
+    @Bean
+    public GraphDatabase getGraphDB() {
+        return getGraphDatabase();
     }
 }
