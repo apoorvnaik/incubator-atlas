@@ -33,7 +33,6 @@ import org.apache.atlas.repository.store.graph.v1.AtlasGraphUtilsV1;
 import org.apache.atlas.type.AtlasClassificationType;
 import org.apache.atlas.type.AtlasEntityType;
 import org.apache.atlas.type.AtlasStructType;
-import org.apache.atlas.type.AtlasTypeRegistry;
 import org.apache.atlas.utils.AtlasPerfTracer;
 import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
@@ -60,14 +59,12 @@ public class GremlinStep implements PipelineStep {
     private static final Logger PERF_LOG = AtlasPerfTracer.getPerfLogger("GremlinSearchStep");
 
     private final AtlasGraph        graph;
-    private final AtlasTypeRegistry typeRegistry;
 
     enum GremlinFilterQueryType { TAG, ENTITY }
 
     @Inject
-    public GremlinStep(AtlasGraph graph, AtlasTypeRegistry typeRegistry) {
+    public GremlinStep(AtlasGraph graph) {
         this.graph        = graph;
-        this.typeRegistry = typeRegistry;
     }
 
     @Override
@@ -322,12 +319,13 @@ public class GremlinStep implements PipelineStep {
                 final String  qualifiedAttributeName;
                 final boolean attrProcessed;
 
+                qualifiedAttributeName = type.getQualifiedAttributeName(attrName);
                 if (queryType == GremlinFilterQueryType.TAG) {
-                    qualifiedAttributeName = type.getQualifiedAttributeName(attrName);
-                    attrProcessed          = context.hasProcessedTagAttribute(qualifiedAttributeName);
+                    attrProcessed = context.hasProcessedTagAttribute(qualifiedAttributeName);
+                    context.addTagSearchAttribute(qualifiedAttributeName);
                 } else {
-                    qualifiedAttributeName = type.getQualifiedAttributeName(attrName);
-                    attrProcessed          = context.hasProcessedEntityAttribute(qualifiedAttributeName);
+                    attrProcessed = context.hasProcessedEntityAttribute(qualifiedAttributeName);
+                    context.addEntitySearchAttribute(qualifiedAttributeName);
                 }
 
                 // Check if the qualifiedAttribute has been processed

@@ -22,12 +22,14 @@ import org.apache.atlas.model.discovery.SearchParameters;
 import org.apache.atlas.model.discovery.SearchParameters.FilterCriteria;
 import org.apache.atlas.model.discovery.SearchParameters.FilterCriteria.Condition;
 import org.apache.atlas.repository.Constants;
-import org.apache.atlas.repository.graph.GraphBackedSearchIndexer;
-import org.apache.atlas.repository.graphdb.*;
+import org.apache.atlas.repository.graphdb.AtlasEdge;
+import org.apache.atlas.repository.graphdb.AtlasEdgeDirection;
+import org.apache.atlas.repository.graphdb.AtlasGraphQuery;
+import org.apache.atlas.repository.graphdb.AtlasIndexQuery;
+import org.apache.atlas.repository.graphdb.AtlasVertex;
 import org.apache.atlas.type.AtlasClassificationType;
 import org.apache.atlas.type.AtlasEntityType;
 import org.apache.atlas.type.AtlasStructType;
-import org.apache.atlas.type.AtlasTypeRegistry;
 import org.apache.atlas.util.SearchTracker;
 import org.apache.atlas.utils.AtlasPerfTracer;
 import org.apache.commons.collections.CollectionUtils;
@@ -60,33 +62,26 @@ public class SearchPipeline {
     private final SolrStep                 solrStep;
     private final GremlinStep              gremlinStep;
     private final SearchTracker            searchTracker;
-    private final AtlasTypeRegistry        typeRegistry;
     private final Configuration            atlasConfiguration;
-    private final GraphBackedSearchIndexer indexer;
 
     @Inject
-    public SearchPipeline(SolrStep solrStep, GremlinStep gremlinStep, SearchTracker searchTracker, AtlasTypeRegistry typeRegistry, Configuration atlasConfiguration, GraphBackedSearchIndexer indexer) {
+    public SearchPipeline(SolrStep solrStep, GremlinStep gremlinStep, SearchTracker searchTracker, Configuration atlasConfiguration) {
         this.solrStep           = solrStep;
         this.gremlinStep        = gremlinStep;
         this.searchTracker      = searchTracker;
-        this.typeRegistry       = typeRegistry;
         this.atlasConfiguration = atlasConfiguration;
-        this.indexer            = indexer;
     }
 
-    public List<AtlasVertex> run(SearchParameters searchParameters) throws AtlasBaseException {
+    public List<AtlasVertex> run(PipelineContext context) throws AtlasBaseException {
         final List<AtlasVertex> ret;
 
         AtlasPerfTracer perf = null;
 
         if (AtlasPerfTracer.isPerfTraceEnabled(PERF_LOG)) {
-            perf = AtlasPerfTracer.getPerfTracer(PERF_LOG, "SearchPipeline.run("+ searchParameters +")");
+            perf = AtlasPerfTracer.getPerfTracer(PERF_LOG, "SearchPipeline.run("+ context +")");
         }
 
-        AtlasEntityType         entityType = typeRegistry.getEntityTypeByName(searchParameters.getTypeName());
-        AtlasClassificationType classiType = typeRegistry.getClassificationTypeByName(searchParameters.getClassification());
-        PipelineContext         context    = new PipelineContext(searchParameters, entityType, classiType, indexer.getVertexIndexKeys());
-        String                  searchId   = searchTracker.add(context); // For future cancellation
+        String searchId   = searchTracker.add(context); // For future cancellation
 
         try {
             ExecutionMode mode = determineExecutionMode(context);
@@ -357,7 +352,9 @@ public class SearchPipeline {
 
         ExecutionMode mode = ExecutionMode.MIXED;
 
-        if (solrCount == 1 && gremlinCount == 0) {
+        if (solrCount == gremlinCount) {
+            mode = ExecutionMode.MIXED;
+        } else  if (solrCount == 1 && gremlinCount == 0) {
             mode = ExecutionMode.SOLR;
         } else if (gremlinCount == 1 && solrCount == 0) {
             mode = ExecutionMode.GREMLIN;
@@ -555,11 +552,15 @@ public class SearchPipeline {
         }
 
         public boolean addEntitySearchAttribute(String attribute) {
-            return tagSearchAttributes.add(attribute);
+            return entitySearchAttributes.add(attribute);
         }
 
         public boolean addProcessedEntityAttribute(String attribute) {
             return entityAttrProcessedBySolr.add(attribute);
+        }
+
+        public Set<String> getEntitySearchAttribute() {
+            return entitySearchAttributes;
         }
 
         public void cacheGraphQuery(String name, AtlasGraphQuery graphQuery) {
