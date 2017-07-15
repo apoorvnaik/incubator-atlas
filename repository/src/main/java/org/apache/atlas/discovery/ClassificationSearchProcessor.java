@@ -42,12 +42,12 @@ public class ClassificationSearchProcessor extends SearchProcessor {
     public ClassificationSearchProcessor(SearchContext context) {
         super(context);
 
-        AtlasClassificationType classificationType = context.getClassificationType();
-        FilterCriteria          filterCriteria     = context.getSearchParameters().getTagFilters();
-        Set<String>             typeAndSubTypes    = classificationType.getTypeAndAllSubTypes();
-        Set<String>             solrAttributes     = new HashSet<>();
-        Set<String>             gremlinAttributes  = new HashSet<>();
-        Set<String>             allAttributes      = new HashSet<>();
+        AtlasClassificationType classificationType  = context.getClassificationType();
+        FilterCriteria filterCriteria      = context.getSearchParameters().getTagFilters();
+        Set<String> typeAndSubTypes     = classificationType.getTypeAndAllSubTypes();
+        Set<String> solrAttributes      = new HashSet<>();
+        Set<String> gremlinAttributes   = new HashSet<>();
+        Set<String> allAttributes       = new HashSet<>();
 
 
         processSearchAttributes(classificationType, filterCriteria, solrAttributes, gremlinAttributes, allAttributes);

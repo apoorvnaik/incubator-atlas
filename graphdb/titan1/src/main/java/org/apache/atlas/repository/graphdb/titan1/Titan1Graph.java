@@ -37,9 +37,11 @@ import org.apache.atlas.repository.graphdb.AtlasGraph;
 import org.apache.atlas.repository.graphdb.AtlasGraphManagement;
 import org.apache.atlas.repository.graphdb.AtlasGraphQuery;
 import org.apache.atlas.repository.graphdb.AtlasIndexQuery;
+import org.apache.atlas.repository.graphdb.AtlasMultiVertexQuery;
 import org.apache.atlas.repository.graphdb.AtlasSchemaViolationException;
 import org.apache.atlas.repository.graphdb.AtlasVertex;
 import org.apache.atlas.repository.graphdb.GremlinVersion;
+import org.apache.atlas.repository.graphdb.titan1.query.Titan1AtlasMultiVertexQuery;
 import org.apache.atlas.repository.graphdb.titan1.query.Titan1GraphQuery;
 import org.apache.atlas.repository.graphdb.utils.IteratorToIterableAdapter;
 import org.apache.atlas.typesystem.types.IDataType;
@@ -121,6 +123,11 @@ public class Titan1Graph implements AtlasGraph<Titan1Vertex, Titan1Edge> {
     @Override
     public AtlasGraphQuery<Titan1Vertex, Titan1Edge> query() {
         return new Titan1GraphQuery(this);
+    }
+
+    @Override
+    public AtlasMultiVertexQuery multiVertexQuery() {
+        return new Titan1AtlasMultiVertexQuery(this);
     }
 
     @Override

@@ -146,6 +146,13 @@ public interface AtlasGraph<V, E> {
     AtlasGraphQuery<V, E> query();
 
     /**
+     * Creates a multi-vertex query
+     *
+     * @return
+     */
+    <Q extends AtlasMultiVertexQuery> AtlasMultiVertexQuery<V, E, Q> multiVertexQuery();
+
+    /**
      * Creates an index query.
      *
      * @param indexName index name
