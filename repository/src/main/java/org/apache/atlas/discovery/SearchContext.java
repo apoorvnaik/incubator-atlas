@@ -27,6 +27,7 @@ import org.apache.atlas.type.AtlasTypeRegistry;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.HashSet;
 import java.util.Set;
 
 
@@ -35,6 +36,7 @@ public class SearchContext {
     private final AtlasTypeRegistry       typeRegistry;
     private final AtlasGraph              graph;
     private final Set<String>             indexedKeys;
+    private final Set<String>             entityAttributes;
     private final AtlasEntityType         entityType;
     private final AtlasClassificationType classificationType;
     private       SearchProcessor         searchProcessor;
@@ -47,6 +49,8 @@ public class SearchContext {
         this.indexedKeys        = indexedKeys;
         this.entityType         = typeRegistry.getEntityTypeByName(searchParameters.getTypeName());
         this.classificationType = typeRegistry.getClassificationTypeByName(searchParameters.getClassification());
+
+        entityAttributes = new HashSet<>();
 
         if (needFullTextrocessor()) {
             addProcessor(new FullTextSearchProcessor(this));
@@ -109,6 +113,10 @@ public class SearchContext {
 
     public boolean needEntityProcessor() {
         return entityType != null;
+    }
+
+    public Set<String> getEntityAttributes() {
+        return entityAttributes;
     }
 
     private boolean hasAttributeFilter(FilterCriteria filterCriteria) {
