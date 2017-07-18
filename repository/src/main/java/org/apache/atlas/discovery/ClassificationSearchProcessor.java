@@ -25,6 +25,7 @@ import org.apache.atlas.repository.store.graph.v1.AtlasGraphUtilsV1;
 import org.apache.atlas.type.AtlasClassificationType;
 import org.apache.atlas.utils.AtlasPerfTracer;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.lucene.search.BooleanQuery;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,6 +61,12 @@ public class ClassificationSearchProcessor extends SearchProcessor {
 
             constructTypeTestQuery(solrQuery, typeAndSubTypes);
             constructFilterQuery(solrQuery, classificationType, filterCriteria, solrAttributes);
+
+            BooleanQuery booleanQuery = new BooleanQuery();
+            constructTypeTestQuery(booleanQuery, typeAndSubTypes);
+            constructFilterQuery(booleanQuery, classificationType, filterCriteria, solrAttributes);
+
+            LOG.info(booleanQuery.toString());
 
             String solrQueryString = STRAY_AND_PATTERN.matcher(solrQuery).replaceAll(")");
 

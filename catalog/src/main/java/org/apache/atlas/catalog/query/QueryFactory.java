@@ -20,15 +20,23 @@ package org.apache.atlas.catalog.query;
 
 import org.apache.atlas.catalog.Request;
 import org.apache.atlas.catalog.TermPath;
-import org.apache.atlas.catalog.definition.*;
+import org.apache.atlas.catalog.definition.EntityResourceDefinition;
+import org.apache.atlas.catalog.definition.EntityTagResourceDefinition;
+import org.apache.atlas.catalog.definition.ResourceDefinition;
+import org.apache.atlas.catalog.definition.TaxonomyResourceDefinition;
+import org.apache.atlas.catalog.definition.TermResourceDefinition;
 import org.apache.atlas.catalog.exception.CatalogRuntimeException;
 import org.apache.atlas.catalog.exception.InvalidQueryException;
 import org.apache.lucene.analysis.core.KeywordAnalyzer;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.sandbox.queries.regex.RegexQuery;
-import org.apache.lucene.search.*;
-import org.apache.lucene.util.Version;
+import org.apache.lucene.search.BooleanQuery;
+import org.apache.lucene.search.PrefixQuery;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.TermQuery;
+import org.apache.lucene.search.TermRangeQuery;
+import org.apache.lucene.search.WildcardQuery;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -86,7 +94,8 @@ public class QueryFactory {
 
         QueryExpression queryExpression;
         if (queryString != null && !queryString.isEmpty()) {
-            QueryParser queryParser = new QueryParser(Version.LUCENE_48, "name", new KeywordAnalyzer());
+//            QueryParser queryParser = new QueryParser(Version.LUCENE_48, "name", new KeywordAnalyzer());
+            QueryParser queryParser = new QueryParser("name", new KeywordAnalyzer());
             queryParser.setLowercaseExpandedTerms(false);
             queryParser.setAllowLeadingWildcard(true);
             Query query;

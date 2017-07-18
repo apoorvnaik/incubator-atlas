@@ -19,14 +19,21 @@ package org.apache.atlas.discovery;
 
 import org.apache.atlas.model.discovery.SearchParameters.FilterCriteria;
 import org.apache.atlas.repository.Constants;
-import org.apache.atlas.repository.graphdb.*;
+import org.apache.atlas.repository.graphdb.AtlasGraphQuery;
+import org.apache.atlas.repository.graphdb.AtlasIndexQuery;
+import org.apache.atlas.repository.graphdb.AtlasVertex;
 import org.apache.atlas.type.AtlasEntityType;
 import org.apache.atlas.utils.AtlasPerfTracer;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.lucene.search.BooleanQuery;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 
 public class EntitySearchProcessor extends SearchProcessor {
     private static final Logger LOG      = LoggerFactory.getLogger(EntitySearchProcessor.class);
@@ -64,13 +71,21 @@ public class EntitySearchProcessor extends SearchProcessor {
             gremlinAttributes.addAll(solrAttributes);
         }
 
+        BooleanQuery booleanQuery = new BooleanQuery();
+        constructTypeTestQuery(booleanQuery, typeAndSubTypes);
+        constructFilterQuery(booleanQuery, entityType, filterCriteria, solrAttributes);
+
+        String booleanQueryStr = booleanQuery.toString();
+        LOG.info(booleanQueryStr);
+
         if (solrQuery.length() > 0) {
             String solrQueryString = STRAY_AND_PATTERN.matcher(solrQuery).replaceAll(")");
 
             solrQueryString = STRAY_OR_PATTERN.matcher(solrQueryString).replaceAll(")");
             solrQueryString = STRAY_ELIPSIS_PATTERN.matcher(solrQueryString).replaceAll("");
 
-            indexQuery = context.getGraph().indexQuery(Constants.VERTEX_INDEX, solrQueryString);
+            indexQuery = context.getGraph().indexQuery(Constants.VERTEX_INDEX, booleanQueryStr);
+//            indexQuery = context.getGraph().indexQuery(Constants.VERTEX_INDEX, solrQueryString);
         } else {
             indexQuery = null;
         }

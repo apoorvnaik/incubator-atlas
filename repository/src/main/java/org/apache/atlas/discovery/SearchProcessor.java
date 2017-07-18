@@ -24,16 +24,35 @@ import org.apache.atlas.model.discovery.SearchParameters;
 import org.apache.atlas.model.discovery.SearchParameters.FilterCriteria;
 import org.apache.atlas.model.discovery.SearchParameters.FilterCriteria.Condition;
 import org.apache.atlas.repository.Constants;
-import org.apache.atlas.repository.graphdb.*;
+import org.apache.atlas.repository.graphdb.AtlasGraphQuery;
+import org.apache.atlas.repository.graphdb.AtlasIndexQuery;
+import org.apache.atlas.repository.graphdb.AtlasVertex;
 import org.apache.atlas.repository.store.graph.v1.AtlasGraphUtilsV1;
 import org.apache.atlas.type.AtlasEntityType;
 import org.apache.atlas.type.AtlasStructType;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.lucene.index.Term;
+import org.apache.lucene.search.BooleanClause;
+import org.apache.lucene.search.BooleanQuery;
+import org.apache.lucene.search.NumericRangeQuery;
+import org.apache.lucene.search.PhraseQuery;
+import org.apache.lucene.search.PrefixQuery;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.RegexpQuery;
+import org.apache.lucene.search.TermQuery;
+import org.apache.lucene.search.WildcardQuery;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 public abstract class SearchProcessor {
@@ -186,6 +205,12 @@ public abstract class SearchProcessor {
                 .append(")");
     }
 
+    protected void constructTypeTestQuery(BooleanQuery booleanClauses, Set<String> typeAndAllSubTypes) {
+        String typeAndSubtypesString = StringUtils.join(typeAndAllSubTypes, SPACE_STRING);
+        TermQuery termQuery = new TermQuery(new Term("v.\"__typeName\"", typeAndSubtypesString));
+        booleanClauses.add(termQuery, BooleanClause.Occur.MUST);
+    }
+
     protected void constructFilterQuery(StringBuilder solrQuery, AtlasStructType type, FilterCriteria filterCriteria, Set<String> solrAttributes) {
         if (filterCriteria != null) {
             LOG.debug("Processing Filters");
@@ -207,6 +232,99 @@ public abstract class SearchProcessor {
             }
 
             solrQuery.append("v.\"__state\":").append("ACTIVE");
+        }
+    }
+
+    protected void constructFilterQuery(BooleanQuery booleanClauses, AtlasStructType type, FilterCriteria filterCriteria, Set<String> solrAttributes) {
+        if (filterCriteria != null) {
+            LOG.debug("Processing Filters");
+
+            constructBooleanClause(booleanClauses, type, filterCriteria, solrAttributes);
+        }
+
+        if (type instanceof AtlasEntityType && context.getSearchParameters().getExcludeDeletedEntities()) {
+            TermQuery activeStateQuery = new TermQuery(new Term("v.\"__state\"", "ACTIVE"));
+            booleanClauses.add(activeStateQuery, BooleanClause.Occur.MUST);
+        }
+    }
+
+    private void constructBooleanClause(BooleanQuery booleanClauses, AtlasStructType type, FilterCriteria criteria, Set<String> solrAttributes) {
+        if (criteria.getCondition() != null && CollectionUtils.isNotEmpty(criteria.getCriterion())) {
+            BooleanClause.Occur occur = criteria.getCondition() == Condition.AND ? BooleanClause.Occur.MUST : BooleanClause.Occur.SHOULD;
+
+            for (FilterCriteria filterCriteria : criteria.getCriterion()) {
+                BooleanQuery nestedBooleanClause = new BooleanQuery();
+                constructBooleanClause(nestedBooleanClause, type, filterCriteria, solrAttributes);
+
+                booleanClauses.add(nestedBooleanClause, occur);
+            }
+        } else if (solrAttributes.contains(criteria.getAttributeName())){
+            constructAttrQuery(booleanClauses, type, criteria.getAttributeName(), criteria.getOperator(), criteria.getAttributeValue());
+        }
+    }
+
+    private void constructAttrQuery(BooleanQuery booleanClauses, AtlasStructType type, String attrName, SearchParameters.Operator operator, String attrVal) {
+        Query attrQuery;
+        String qualifiedName;
+        try {
+            qualifiedName = type.getQualifiedAttributeName(attrName);
+        } catch (AtlasBaseException e) {
+            LOG.warn("Attr {} doesn't have qualifiedName", attrName);
+            qualifiedName = attrName;
+        }
+
+        String field = "v.\"" + qualifiedName + "\"";
+        switch (operator) {
+            case LT:
+                attrQuery = NumericRangeQuery.newLongRange(field, null, Long.valueOf(attrVal), true, false);
+                booleanClauses.add(attrQuery, BooleanClause.Occur.MUST);
+                break;
+            case GT:
+                attrQuery = NumericRangeQuery.newLongRange(field, Long.valueOf(attrVal), null, false, true);
+                booleanClauses.add(attrQuery, BooleanClause.Occur.MUST);
+                break;
+            case LTE:
+                attrQuery = NumericRangeQuery.newLongRange(field, null, Long.valueOf(attrVal), true, true);
+                booleanClauses.add(attrQuery, BooleanClause.Occur.MUST);
+                break;
+            case GTE:
+                attrQuery = NumericRangeQuery.newLongRange(field, Long.valueOf(attrVal), null, true, false);
+                booleanClauses.add(attrQuery, BooleanClause.Occur.MUST);
+                break;
+            case EQ:
+                if (hasOffendingChars(attrVal)) {
+                    attrQuery = new TermQuery(new Term(field, "\"" + attrVal + "\""));
+                } else {
+                    attrQuery = new TermQuery(new Term(field, attrVal));
+                }
+                booleanClauses.add(attrQuery, BooleanClause.Occur.MUST);
+                break;
+            case NEQ:
+                attrQuery = new TermQuery(new Term(field, attrVal));
+                booleanClauses.add(attrQuery, BooleanClause.Occur.MUST_NOT);
+                break;
+            case IN:
+                PhraseQuery phraseQuery = new PhraseQuery();
+                phraseQuery.add(new Term(field, attrVal));
+                attrQuery = phraseQuery;
+                booleanClauses.add(attrQuery, BooleanClause.Occur.SHOULD);
+                break;
+            case LIKE:
+                attrQuery = new RegexpQuery(new Term(field, attrVal));
+                booleanClauses.add(attrQuery, BooleanClause.Occur.MUST);
+                break;
+            case STARTS_WITH:
+                attrQuery = new PrefixQuery(new Term(field, attrVal));
+                booleanClauses.add(attrQuery, BooleanClause.Occur.MUST);
+                break;
+            case ENDS_WITH:
+                attrQuery = new WildcardQuery(new Term(field, "*" + attrVal));
+                booleanClauses.add(attrQuery, BooleanClause.Occur.MUST);
+                break;
+            case CONTAINS:
+                attrQuery = new TermQuery(new Term(field, "*" + attrVal + "*"));
+                booleanClauses.add(attrQuery, BooleanClause.Occur.MUST);
+                break;
         }
     }
 
