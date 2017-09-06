@@ -40,6 +40,7 @@ import org.apache.atlas.util.SearchPredicateUtil.*;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.Predicate;
 import org.apache.commons.collections.PredicateUtils;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,6 +66,10 @@ public abstract class SearchProcessor {
     public static final String  SPACE_STRING    = " ";
     public static final String  BRACE_OPEN_STR  = "(";
     public static final String  BRACE_CLOSE_STR = ")";
+
+    // ATLAS-2118: Reserved regex characters in attribute value can cause the titan query to fail when parsing the
+    // contains regex
+    private static final char[] REGEX_SPECIAL = {'+', '|', '(', '{', '[', '*', '?', '$', '/', '^'};
 
     private static final Map<SearchParameters.Operator, String>                            OPERATOR_MAP           = new HashMap<>();
     private static final Map<SearchParameters.Operator, VertexAttributePredicateGenerator> OPERATOR_PREDICATE_MAP = new HashMap<>();
@@ -220,6 +225,8 @@ public abstract class SearchProcessor {
             }
         } else if (StringUtils.isNotEmpty(filterCriteria.getAttributeName())) {
             try {
+
+
                 if (insideOrCondition && !isIndexSearchable(filterCriteria, structType)) {
                     ret = false;
                 }
@@ -614,8 +621,17 @@ public abstract class SearchProcessor {
         }
     }
 
+    // ATLAS-2118: Reserved regex characters in attribute value can cause the titan query to fail when parsing the
+    // contains regex
     private String getContainsRegex(String attributeValue) {
-        return ".*" + attributeValue + ".*";
+        StringBuilder escapedAttrVal = new StringBuilder();
+        for (char c : attributeValue.toCharArray()) {
+            if (ArrayUtils.contains(REGEX_SPECIAL, c)) {
+                escapedAttrVal.append("\\");
+            }
+            escapedAttrVal.append(c);
+        }
+        return ".*" + escapedAttrVal + ".*";
     }
 
     private String getSuffixRegex(String attributeValue) {
