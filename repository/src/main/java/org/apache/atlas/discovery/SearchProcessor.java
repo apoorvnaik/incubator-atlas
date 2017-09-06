@@ -30,6 +30,7 @@ import org.apache.atlas.repository.graphdb.AtlasIndexQuery;
 import org.apache.atlas.repository.graphdb.AtlasVertex;
 import org.apache.atlas.repository.store.graph.v1.AtlasGraphUtilsV1;
 import org.apache.atlas.type.AtlasArrayType;
+import org.apache.atlas.type.AtlasBuiltInTypes;
 import org.apache.atlas.type.AtlasEntityType;
 import org.apache.atlas.type.AtlasEnumType;
 import org.apache.atlas.type.AtlasStructType;
@@ -65,6 +66,10 @@ public abstract class SearchProcessor {
     public static final String  SPACE_STRING    = " ";
     public static final String  BRACE_OPEN_STR  = "(";
     public static final String  BRACE_CLOSE_STR = ")";
+
+    // ATLAS-2117: Special characters cause string to be split into tokens, which sometimes gives false negatives
+    private static final char[] OFFENDING_DELIMITERS = {'+', '-', '&', '|', '!', '(', ')', '{', '}', '[', ']',
+            '^', '"', '~', '*', '?', ':', '/', '#', '$', '%', '@', '='};
 
     private static final Map<SearchParameters.Operator, String>                            OPERATOR_MAP           = new HashMap<>();
     private static final Map<SearchParameters.Operator, VertexAttributePredicateGenerator> OPERATOR_PREDICATE_MAP = new HashMap<>();
@@ -221,14 +226,30 @@ public abstract class SearchProcessor {
                 }
             }
         } else if (StringUtils.isNotEmpty(filterCriteria.getAttributeName())) {
-            try {
-                String qualifiedName = structType.getQualifiedAttributeName(filterCriteria.getAttributeName());
+            // ATLAS-2117 : Current tokenization in solr causes false negatives, once the data is re-indexed
+            // this check can be removed
+            AtlasType attributeType = structType.getAttributeType(filterCriteria.getAttributeName());
+            boolean   isStringType  = attributeType.getClass().equals(AtlasBuiltInTypes.AtlasStringType.class);
+            if (filterCriteria.getOperator() == SearchParameters.Operator.NEQ && isStringType) {
+                LOG.warn("Filter criteria has NEQ for String type, defer to in-memory predicate or graph query");
+                ret = false;
+            } else {
+                try {
+                    String qualifiedName = structType.getQualifiedAttributeName(filterCriteria.getAttributeName());
 
-                if (insideOrCondition && (indexedKeys == null || !indexedKeys.contains(qualifiedName))) {
-                    ret = false;
+                    if (insideOrCondition && (indexedKeys == null || !indexedKeys.contains(qualifiedName))) {
+                        ret = false;
+                    }
+
+                    // Refer to ATLAS-2117 (can be removed once the indexing issue is resolved)
+                    String attributeValue = filterCriteria.getAttributeValue();
+                    if (StringUtils.containsAny(attributeValue, OFFENDING_DELIMITERS)) {
+                        LOG.warn("AttributeValue has special Tokenizer characters, defer to in-memory or graph query");
+                        ret = false;
+                    }
+                } catch (AtlasBaseException e) {
+                    LOG.warn(e.getMessage());
                 }
-            } catch (AtlasBaseException e) {
-                LOG.warn(e.getMessage());
             }
         }
 
