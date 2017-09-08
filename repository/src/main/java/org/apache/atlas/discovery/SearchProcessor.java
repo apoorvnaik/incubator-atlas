@@ -34,7 +34,7 @@ import org.apache.atlas.type.AtlasStructType;
 import org.apache.atlas.type.AtlasStructType.AtlasAttribute;
 import org.apache.atlas.type.AtlasType;
 import org.apache.atlas.util.AtlasGremlinQueryProvider;
-import org.apache.atlas.util.SearchPredicateUtil.VertexAttributePredicateGenerator;
+import org.apache.atlas.util.SearchPredicateUtil.*;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.Predicate;
 import org.apache.commons.collections.PredicateUtils;
@@ -44,15 +44,7 @@ import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Pattern;
 
 import static org.apache.atlas.util.SearchPredicateUtil.*;
@@ -269,14 +261,16 @@ public abstract class SearchProcessor {
         }
     }
 
-    protected void constructInMemoryPredicate(AtlasStructType type, FilterCriteria filterCriteria, Set<String> indexAttributes) {
+    protected Predicate constructInMemoryPredicate(AtlasStructType type, FilterCriteria filterCriteria, Set<String> indexAttributes) {
+        Predicate ret = null;
         if (filterCriteria != null) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Processing Filters");
             }
 
-            inMemoryPredicate = toInMemoryPredicate(type, filterCriteria, indexAttributes);
+            ret = toInMemoryPredicate(type, filterCriteria, indexAttributes);
         }
+        return ret;
     }
 
     protected void constructGremlinFilterQuery(StringBuilder gremlinQuery, Map<String, Object> queryBindings, AtlasStructType structType, FilterCriteria filterCriteria) {
@@ -457,6 +451,13 @@ public abstract class SearchProcessor {
                 case "bigdecimal":
                     attrClass = BigDecimal.class;
                     attrValue = new BigDecimal(attrVal);
+                    break;
+                case "array":
+                case "collection":
+                case "list":
+                case "set":
+                    attrClass = List.class;
+                    attrValue = Arrays.asList(attrVal);
                     break;
                 default:
                     if (attrType instanceof AtlasEnumType) {
