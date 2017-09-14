@@ -25,6 +25,7 @@ import org.apache.atlas.model.discovery.SearchParameters.FilterCriteria;
 import org.apache.atlas.repository.graphdb.AtlasGraph;
 import org.apache.atlas.type.AtlasClassificationType;
 import org.apache.atlas.type.AtlasEntityType;
+import org.apache.atlas.type.AtlasStructType;
 import org.apache.atlas.type.AtlasTypeRegistry;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -46,16 +47,16 @@ public class SearchContext {
     private final AtlasEntityType         entityType;
     private final AtlasClassificationType classificationType;
     private       SearchProcessor         searchProcessor;
-    private       boolean                 terminateSearch = false;
+    private boolean terminateSearch = false;
 
     public SearchContext(SearchParameters searchParameters, AtlasTypeRegistry typeRegistry, AtlasGraph graph, Set<String> indexedKeys) throws AtlasBaseException {
-        this.searchParameters   = searchParameters;
-        this.typeRegistry       = typeRegistry;
-        this.graph              = graph;
-        this.indexedKeys        = indexedKeys;
-        entityAttributes        = new HashSet<>();
-        entityType              = typeRegistry.getEntityTypeByName(searchParameters.getTypeName());
-        classificationType      = typeRegistry.getClassificationTypeByName(searchParameters.getClassification());
+        this.searchParameters = searchParameters;
+        this.typeRegistry = typeRegistry;
+        this.graph = graph;
+        this.indexedKeys = indexedKeys;
+        entityAttributes = new HashSet<>();
+        entityType = typeRegistry.getEntityTypeByName(searchParameters.getTypeName());
+        classificationType = typeRegistry.getClassificationTypeByName(searchParameters.getClassification());
 
         // Validate if the type name exists
         if (StringUtils.isNotEmpty(searchParameters.getTypeName()) && entityType == null) {
@@ -66,6 +67,10 @@ public class SearchContext {
         if (StringUtils.isNotEmpty(searchParameters.getClassification()) && classificationType == null) {
             throw new AtlasBaseException(AtlasErrorCode.UNKNOWN_CLASSIFICATION, searchParameters.getClassification());
         }
+
+        // Validate the attribute presence upfront
+        validateAttributes(entityType, searchParameters.getEntityFilters());
+        validateAttributes(classificationType, searchParameters.getTagFilters());
 
         if (needFullTextProcessor()) {
             addProcessor(new FullTextSearchProcessor(this));
@@ -80,25 +85,45 @@ public class SearchContext {
         }
     }
 
-    public SearchParameters getSearchParameters() { return searchParameters; }
+    public SearchParameters getSearchParameters() {
+        return searchParameters;
+    }
 
-    public AtlasTypeRegistry getTypeRegistry() { return typeRegistry; }
+    public AtlasTypeRegistry getTypeRegistry() {
+        return typeRegistry;
+    }
 
-    public AtlasGraph getGraph() { return graph; }
+    public AtlasGraph getGraph() {
+        return graph;
+    }
 
-    public Set<String> getIndexedKeys() { return indexedKeys; }
+    public Set<String> getIndexedKeys() {
+        return indexedKeys;
+    }
 
-    public Set<String> getEntityAttributes() { return entityAttributes; }
+    public Set<String> getEntityAttributes() {
+        return entityAttributes;
+    }
 
-    public AtlasEntityType getEntityType() { return entityType; }
+    public AtlasEntityType getEntityType() {
+        return entityType;
+    }
 
-    public AtlasClassificationType getClassificationType() { return classificationType; }
+    public AtlasClassificationType getClassificationType() {
+        return classificationType;
+    }
 
-    public SearchProcessor getSearchProcessor() { return searchProcessor; }
+    public SearchProcessor getSearchProcessor() {
+        return searchProcessor;
+    }
 
-    public boolean terminateSearch() { return terminateSearch; }
+    public boolean terminateSearch() {
+        return terminateSearch;
+    }
 
-    public void terminateSearch(boolean terminateSearch) { this.terminateSearch = terminateSearch; }
+    public void terminateSearch(boolean terminateSearch) {
+        this.terminateSearch = terminateSearch;
+    }
 
     public StringBuilder toString(StringBuilder sb) {
         if (sb == null) {
@@ -131,9 +156,25 @@ public class SearchContext {
         return entityType != null;
     }
 
+    private void validateAttributes(final AtlasStructType structType, final FilterCriteria filterCriteria) throws AtlasBaseException {
+        if (filterCriteria != null) {
+            if (filterCriteria.getCondition() != null && CollectionUtils.isNotEmpty(filterCriteria.getCriterion())) {
+                for (FilterCriteria criteria : filterCriteria.getCriterion()) {
+                    validateAttributes(structType, criteria);
+                }
+            } else {
+                String attributeName = filterCriteria.getAttributeName();
+                if (structType.getAttributeType(attributeName) == null) {
+                    throw new AtlasBaseException(AtlasErrorCode.UNKNOWN_ATTRIBUTE, attributeName, structType.getTypeName());
+                }
+            }
+        }
+
+    }
+
     private boolean hasAttributeFilter(FilterCriteria filterCriteria) {
         return filterCriteria != null &&
-               (CollectionUtils.isNotEmpty(filterCriteria.getCriterion()) || StringUtils.isNotEmpty(filterCriteria.getAttributeName()));
+                (CollectionUtils.isNotEmpty(filterCriteria.getCriterion()) || StringUtils.isNotEmpty(filterCriteria.getAttributeName()));
     }
 
     private void addProcessor(SearchProcessor processor) {
